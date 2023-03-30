@@ -1,0 +1,12 @@
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="/Volumes/Data/Dev/PHP/balafon_site_dev/src/application/Packages/vendor/phpunit/phpunit/phpunit.xsd" bootstrap="./Lib/Tests/autoload.php" colors="true">
+	<testsuites>
+		<testsuite name="projects">
+			<directory>./Lib/Tests</directory>
+		</testsuite>
+	</testsuites>
+	<php>
+		<env name="IGK_BASE_DIR" value="/Volumes/Data/Dev/PHP/balafon_site_dev/src/public"></env>
+		<env name="IGK_APP_DIR" value="/Volumes/Data/Dev/PHP/balafon_site_dev/src/application"></env>
+		<env name="IGK_TEST_MODULE" value="igk/js/Vue3"></env>
+	</php>
+</phpunit>

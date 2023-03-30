@@ -1,0 +1,8 @@
+{
+    "name": "igk/js/Vue3",
+    "author": "C.A.D. BONDJE DOUE",
+    "version": "1.0",
+    "require": {
+        "igk/js/common":"^1.0"
+    }
+}

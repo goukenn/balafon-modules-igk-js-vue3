@@ -1,0 +1,56 @@
+<?php
+// @author: C.A.D. BONDJE DOUE
+// @file: %modules%/igk/js/Vue3/.module.pinc.php
+// @date: 20220405 14:40:16
+namespace igk\js\Vue3;
+
+use IGK\System\Html\Dom\HtmlItemBase;
+
+igk_require_module(\igk\js\common::class);
+require_once $this->m_dir . "/Lib/Classes/VueConstants.php";
+require_once $this->m_dir . "/Lib/Classes/Html/MacrosExtensions.php";
+
+$reg("initDoc", function ($doc) {
+    if (igk_environment()->{"vue3.importmap"}) {
+        $doc->head->script()->setAttribute("type", "importmap")
+            ->setAttribute("language", null)
+            ->Content = json_encode([
+                "imports" => [
+                    "vue" => "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+                ]
+            ], JSON_FORCE_OBJECT | JSON_UNESCAPED_SLASHES);
+    } else {
+        $uri = igk_configs()->get(VueConstants::CNF_VUE_CDN) ?? 
+        igk_environment()->isDev() ? VueConstants::API_URL : VueConstants::API_OPS_URL;
+        $doc->addTempScript($uri)
+            ->activate("defer")
+            ->setAttribute("crossorigin" , "anonymous");
+    }
+    $src = $doc->addTempScript($this->getScriptsDir()."/default.js")->activate('defer');     
+});
+
+// + | register macros  - that enable use of function to external node behaviour
+
+HtmlItemBase::RegisterMacros(VueConstants::WEB_CONTEXT, \igk\js\Vue3\Html\MacrosExtensions::class);
+
+// + module definition
+return [
+    //------------------------------------------------
+    // define entry name space
+    //
+    "entry_NS" => \igk\js\Vue3::class,
+
+    //------------------------------------------------
+    // version
+    //
+    "version" => "1.0",
+
+    //-------------------------------------------------
+    // author
+    //
+    "author" => "C.A.D. BONDJE DOUE",
+
+    "required" => [
+        \igk\js\Vue3::class,
+    ]
+];

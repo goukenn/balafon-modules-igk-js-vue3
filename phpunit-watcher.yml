@@ -1,0 +1,10 @@
+hideManual: true
+watch:
+  directories:
+    - ./
+notifications:
+  passingTests: false
+  failingTests: false
+phpunit:
+  binaryPath: /Volumes/Data/Dev/PHP/balafon_site_dev/src/application/Packages/vendor/bin/phpunit
+  arguments: --stop-on-failure --colors=always --testdox --bootstrap Lib/Tests/autoload.php Lib/Tests
