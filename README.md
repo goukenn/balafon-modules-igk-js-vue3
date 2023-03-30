@@ -2,7 +2,13 @@
 
 use load vue3 js library
 
-importer une vue 
+## import in view context
+
+```php
+igk_require_module(igk\js\vue3::class)
+```
+
+## dynamic import vue SFC standalone file with balafon.corejs
 
 ```js
 const xsample = await igk.js.vue3.loadScript("./assets/winui/xsample.vue");
@@ -87,10 +93,4 @@ in defs application is a good place.
 ->vue_app('main',[...])->setDefs(<<<JS
 const lazyPrivacy = () => import('/lazyPrivacy.vue')
 JS)
-
-
-
-
-
-
-
+```
