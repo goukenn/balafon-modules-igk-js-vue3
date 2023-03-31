@@ -95,6 +95,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor{
 
         }
         if ($has_childs){
+            $this->m_sb->rtrim(',');
             $this->m_sb->append("]");
         }
         $this->m_sb->append(")");
