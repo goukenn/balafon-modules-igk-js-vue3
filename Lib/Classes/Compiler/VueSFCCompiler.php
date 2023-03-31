@@ -3,8 +3,7 @@
 // @file: VueSFCCompiler.php
 // @date: 20230301 18:54:08
 namespace igk\js\Vue3\Compiler;
-
-use Closure;
+ 
 use IGK\System\Exceptions\ArgumentTypeNotValidException;
 use IGK\System\Html\Css\CssParser;
 use IGK\System\Html\Dom\HtmlItemBase;

@@ -12,4 +12,10 @@ namespace igk\js\Vue3\Compiler;
 */
 class VueSFCRenderNodeVisitorOptions{
     var $libraries = [];
+    var $defineArgs = [];
+    var $defineGlobal = [];
+
+    var $component_prefix = '_vue_';
+    var $global_prefix = '$__';
+    var $components = [];
 }

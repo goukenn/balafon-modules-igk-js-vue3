@@ -19,7 +19,7 @@ class VueConstants{
 
     const BUILTIN_DIRECTIVE_CONDITIONAL = 'v-if|v-else|v-else-if';
     const BUILTIN_DIRECTIVE_PRESERVE = 'v-pre';
-    const BUILTIN_DIRECTIVES = self::BUILTIN_DIRECTIVE_CONDITIONAL.'|'.self::BUILTIN_DIRECTIVE_PRESERVE;
+    const BUILTIN_DIRECTIVES = "v-once|v-html|v-text|".self::BUILTIN_DIRECTIVE_CONDITIONAL.'|'.self::BUILTIN_DIRECTIVE_PRESERVE;
 
     const JS_VUE_LIB = 'Vue';
     const JS_VUEEX_LIB = 'Vuex';
@@ -28,8 +28,13 @@ class VueConstants{
     const VUE_METHOD_RENDER = 'h';
     const VUE_METHOD_DEFINE_COMPONENT = 'defineComponent';
     const VUE_METHOD_DEFINE_DYNAMIC_COMPONENT = 'defineDynamicComponent';
+    const VUE_METHOD_RESOLVE_COMPONENT = 'resolveComponent';
+    const VUE_METHOD_RESOLVE_DYNAMIC_COMPONENT = 'resolveDynamicComponent';
 
     const VUE_COMPONENT_TEXT = 'Text';
     const VUE_COMPONENT_TRANSITION = 'Transition'; 
+
+    const VUE_BUILDIN_COMPONENT = 'Text|Teleport|Transition|TransitionGroup|Component|Template';
+
 
 }
