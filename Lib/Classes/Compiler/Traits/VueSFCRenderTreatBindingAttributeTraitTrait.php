@@ -14,6 +14,7 @@ use IGK\System\Regex\Replacement;
 * @package igk\js\Vue3\Compiler\Traits
 */
 trait VueSFCRenderTreatBindingAttributeTraitTrait{
+    use VueSFCRenderTreatGetExpressionValueTrait;
     public static function TreatBindingAttribute($key, $v, $ch='', $context=null){
         $rp = new Replacement;
         $modifiers = [];
@@ -27,18 +28,5 @@ trait VueSFCRenderTreatBindingAttributeTraitTrait{
         $key = $rp->replace($key);
         return ($ch . self::_GetKey($key) . ":" . self::_GetBindingExpressionValue($v, $context));
     }
-    private static function _GetBindingExpressionValue($v, $context=null){
-        if (is_null($v)){
-            return 'null';
-        }
-        if ($v instanceof IHtmlGetValue)
-            $v = $v->getValue($context);
-        else if ($v instanceof HtmlItemBase){
-            igk_die("not allowed");
-        }
-        if (is_numeric($v)){
-            return $v;
-        }
-        return $v;
-    }
+    
 }

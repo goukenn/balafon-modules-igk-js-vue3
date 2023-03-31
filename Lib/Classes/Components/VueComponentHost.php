@@ -5,6 +5,7 @@
 namespace igk\js\Vue3\Components;
 
 use IGK\System\Html\Dom\HtmlItemBase;
+use IGK\System\Html\Dom\Traits\HtmlNodeContainerTrait;
 
 ///<summary></summary>
 /**
@@ -12,7 +13,7 @@ use IGK\System\Html\Dom\HtmlItemBase;
 * @package igk\js\Vue3\Components
 */
 class VueComponentHost extends VueComponent{
-    use IHtmlNodeContainerTrait;
+    use HtmlNodeContainerTrait;
     var $host;  
     var $tagname ="vue-component-host";
     public function getCanRenderTag()
@@ -24,8 +25,8 @@ class VueComponentHost extends VueComponent{
         return [$this->host];
     }
 
-    public function __construct(HtmlItemBase $host)
-    {
+    public function __construct(HtmlItemBase $host){
+        ($host instanceof static) && igk_die("not allowed.");
         parent::__construct();
         $this->host = $host;
     }
@@ -36,13 +37,5 @@ class VueComponentHost extends VueComponent{
             }
         }
         return $g;
-    }
-    public function setAttribute($n, $value){
-        $this->host->setAttribute($n, $value);
-        return $this;
     } 
-
-    // public function getParentNode():?HtmlItemBase{
-    //     return $this->host->getParentNode();
-    // }
 }

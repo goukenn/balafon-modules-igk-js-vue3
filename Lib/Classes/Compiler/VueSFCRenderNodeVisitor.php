@@ -158,7 +158,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                   $v_loop= true;
                 }   
                 // + | treat event - and binding                
-                if ($g_attr = self::_GetAttributeStringDefinition($attrs, $content, $context)){
+                if ($g_attr = self::_GetAttributeStringDefinition($attrs, $content, $context, $this->m_options)){
                     $s->append($ch . "{".$g_attr."}");                    
                     $ch = ',';
                     $content = '';
@@ -263,12 +263,12 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     }
     #endregion
 
-    protected static function _GetAttributeStringDefinition($attrs, $content, $context){
+    protected static function _GetAttributeStringDefinition($attrs, $content, $context, $options){
         $s = '';
         $ch = '';
         foreach ($attrs as $k => $v) {
             if (preg_match("/^(v-on:|@)/", $k)){
-                $s.= self::TreatEventAttribute($k, $v, $ch,$context);
+                $s.= self::TreatEventAttribute($options, $k, $v, $ch,$context);
                 $ch = ',';
                 continue;
             }

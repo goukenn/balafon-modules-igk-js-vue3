@@ -30,6 +30,8 @@ class VueConstants{
     const VUE_METHOD_DEFINE_ASYBC_COMPONENT = 'defineAsyncComponent';
     const VUE_METHOD_RESOLVE_COMPONENT = 'resolveComponent';
     const VUE_METHOD_RESOLVE_DYNAMIC_COMPONENT = 'resolveDynamicComponent';
+    const VUE_METHOD_WITH_MODIFIERS = 'withModifiers';
+    const VUE_METHOD_WITH_DIRECTIVES = 'withDirectives';
 
     const VUE_COMPONENT_TEXT = 'Text';
     const VUE_COMPONENT_TRANSITION = 'Transition'; 

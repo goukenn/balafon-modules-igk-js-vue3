@@ -56,7 +56,7 @@ class VueGenerateRenderJSMethodLoopTest extends ModuleBaseTestCase
         ->vBind("data", "litteral")
         ->setContent("hello {{ i }} {{ key }} ");
         $this->assertEquals(
-            "render(){const{h}=Vue;return (function(l,key){for(key in l){(({i})=>this.push(h('div',{key:i,innerHTML:`hello \${i} \${key}`})))(l[key])} return this}).apply([],[[{i:10,value:'one'},{i:20,value:'two'}]])}",
+            "render(){const{h,resolveComponent}=Vue;const \$__c=(q,n)=>(n in q)?((f)=>typeof(f)=='function'?f():(()=>f)())(q[n]):resolveComponent(n);const _vue_sampleinfo=\$__c(this,'SampleInfo');return (function(l,key){for(key in l){(({i})=>this.push(h('div',{key:i},[h('div',[h(_vue_sampleinfo,{data:litteral,innerHTML:`hello \${i} \${key} `})])])))(l[key])} return this}).apply([],[[{i:10,value:'one'},{i:20,value:'two'}]])}",
             VueSFCCompiler::ConvertToVueRenderMethod($d, $o)
         );
     }
