@@ -75,8 +75,8 @@ abstract class VueMacrosExtensions{
      * @param string $conditions 
      * @return HtmlNode 
      */
-    public static function vElse(HtmlNode $node, string $conditions){
-        return $node->setAttribute("v-else", $conditions);
+    public static function vElse(HtmlNode $node){
+        return $node->activate("v-else");
     }
     /**
      * 

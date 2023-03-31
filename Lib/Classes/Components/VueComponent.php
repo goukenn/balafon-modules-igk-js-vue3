@@ -29,6 +29,23 @@ class VueComponent extends HtmlNode implements IHtmlContextContainer{
     public static function CreateWebNode($n, $attributes = null, $indexOrArgs = null)
     {
         return parent::CreateWebNode($n, $attributes, $indexOrArgs); 
+        // $n = new self($n);
+        // if ($indexOrArgs) $n->setAttributes($indexOrArgs);
+        // return $n;
+    }
+
+    /**
+     * create a node on loader 
+     * @param string $name 
+     * @param null|array $param 
+     * @return mixed 
+     */
+    public static function LoadingNodeCreator(string $name, ?array $param = null)
+    {
+        $n = new self($name);
+        if ($param) $n->setAttributes($param);
+        return $n;
+        
     }
    
 }

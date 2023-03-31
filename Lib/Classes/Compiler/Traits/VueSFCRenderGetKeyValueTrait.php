@@ -4,8 +4,10 @@
 // @date: 20230331 02:58:45
 namespace igk\js\Vue3\Compiler\Traits;
 
+use IGK\Helper\StringUtility;
 use igk\js\common\JSExpression;
 use igk\js\common\JSExpressionUtility;
+use igk\js\Vue3\Compiler\VueSFCUtility;
 use IGK\System\Html\Dom\HtmlItemBase;
 use IGK\System\Html\IHtmlGetValue;
 
@@ -39,6 +41,8 @@ trait VueSFCRenderGetKeyValueTrait{
             return $v;
         }
         if (preg_match("/{/",$v)){
+            // is mustache replace with ${}express
+            $v = VueSFCUtility::InterpolateValue($v, '{{', '}}');          
             return igk_str_surround(trim($v, '`'),"`");
         }
         return igk_str_surround($v,"'");

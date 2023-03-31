@@ -13,6 +13,41 @@ use igk\js\Vue3\VueConstants;
 * @package igk\js\Vue3\Compiler
 */
 abstract class VueSFCUtility{
+    /**
+     * interpolate values
+     * @param string $v 
+     * @param string $start 
+     * @param string $end 
+     * @return string 
+     */
+    public static function InterpolateValue(string $v, string $start='{{', string $end='}}'){
+        $start = '{{';
+            $end = '}}';
+            $ln = strlen($v);
+            $tp = 0;
+            $pos = 0;
+            while(($pos<$ln) && ($pos = strpos($v, $start))!==false){
+                //
+                $tp = $pos;
+                $pos += strlen($start);
+                $vv = '';
+                while($pos<$ln){
+                    $ch = StringUtility::ReadBrank($v, $pos);                  
+                    $vv .= $ch;
+                    if (strrpos($vv, $end) !== false){
+                        $v = igk_str_rm($v, $tp, $pos - $tp + (strlen($end)-1));
+                        $vv = trim(igk_str_rm_last($vv, $end));
+                        $v = igk_str_insert('${'.$vv.'}', $v, $tp);
+                    
+                        break;
+                    }
+                    $pos++;
+
+                }
+            }
+        return $v;
+
+    }
     public static function CheckBindAttribute($attrib, $key){
         foreach(["v-bind:",":"] as $k){
             $s=$k.$key;

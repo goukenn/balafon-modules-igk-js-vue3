@@ -65,4 +65,35 @@ class SFCScriptSetup
         }
         return $def;
     }
+    public static function TransformToThisContext(string $src):string{
+        $s = "";
+        $jsreader = new JSScriptReader;
+        $jsreader->src = $src;
+        $mode = 0;
+        $def = [];
+        $declare_mode = false;
+        $end = false;
+        $follow = false;
+        while (!$end && $jsreader->read()) {
+            $cv = $jsreader->value;
+            if ($jsreader->depth == 0) {
+                switch($jsreader->type){
+                case $jsreader::TOKEN_RESERVED_WORD:
+                    if ($cv=="this"){
+                        $follow= true;
+                    }
+                    break;
+                case $jsreader::TOKEN_WORD:
+                    // if not follow this
+                    if (!$follow){
+                        $cv = 'this.'.$cv;                        
+                    }
+                    $follow = false;
+                    break;
+                }
+            }
+            $s.= $cv;
+        }
+        return $s;
+    }
 }
