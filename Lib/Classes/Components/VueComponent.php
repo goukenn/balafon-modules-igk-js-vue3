@@ -28,10 +28,14 @@ class VueComponent extends HtmlNode implements IHtmlContextContainer{
     }
     public static function CreateWebNode($n, $attributes = null, $indexOrArgs = null)
     {
-        return parent::CreateWebNode($n, $attributes, $indexOrArgs); 
-        // $n = new self($n);
-        // if ($indexOrArgs) $n->setAttributes($indexOrArgs);
-        // return $n;
+        if ($n =  parent::CreateWebNode($n, $attributes, $indexOrArgs)){
+            if (!($n instanceof static)){
+                $n = new VueComponentHost($n);
+            }
+        }
+        
+        return $n;
+       
     }
 
     /**

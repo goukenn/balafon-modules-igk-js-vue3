@@ -48,11 +48,12 @@ class VueGenerateRenderJSMethodLoopTest extends ModuleBaseTestCase
     {
         $o = new VueSFCRenderNodeVisitorOptions;
         $o->components['SampleInfo'] = 1;
+        $o->test = true;
         $d = new VueComponent('div');
         $d->vFor("{i} in [{i:10,value:'one'},{i:20,value:'two'}]")
         ->vBind("key", "i")
         ->div()->add("SampleInfo")
-        ->vBind("data", "i")
+        ->vBind("data", "litteral")
         ->setContent("hello {{ i }} {{ key }} ");
         $this->assertEquals(
             "render(){const{h}=Vue;return (function(l,key){for(key in l){(({i})=>this.push(h('div',{key:i,innerHTML:`hello \${i} \${key}`})))(l[key])} return this}).apply([],[[{i:10,value:'one'},{i:20,value:'two'}]])}",

@@ -18,4 +18,10 @@ class VueSFCRenderNodeVisitorOptions{
     var $component_prefix = '_vue_';
     var $global_prefix = '$__';
     var $components = [];
+
+    /**
+     * test mode
+     * @var ?bool
+     */
+    var $test;
 }

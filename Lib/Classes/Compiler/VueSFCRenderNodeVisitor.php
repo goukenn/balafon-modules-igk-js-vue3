@@ -59,7 +59,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     {
         $args = $preload = '';
         $visitor = new static($node);
-        $is_local = is_null($options);
+        $is_local = is_null($options) || $options->test;
         $options = Activator::CreateFrom($options, VueSFCRenderNodeVisitorOptions::class);
         $visitor->m_options = $options;
         self::AddLib($options, VueConstants::VUE_METHOD_RENDER, VueConstants::JS_VUE_LIB);

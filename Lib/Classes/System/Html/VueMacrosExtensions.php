@@ -108,7 +108,7 @@ abstract class VueMacrosExtensions{
     public static function vOnce(HtmlNode $node){
         return $node->activate('v-once'); 
     }
-    public static function vBind(HtmlNode $node, $attribute, $value){
+    public static function vBind(HtmlNode $node, string $attribute, $value){
         return $node->setAttribute("v-bind:".$attribute, $value);
     }
     public static function vAdd(HtmlNode $node, $type){
