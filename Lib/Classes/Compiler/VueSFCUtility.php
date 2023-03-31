@@ -13,7 +13,23 @@ use igk\js\Vue3\VueConstants;
 * @package igk\js\Vue3\Compiler
 */
 abstract class VueSFCUtility{
-    protected static function AddLib(VueSFCRenderNodeVisitorOptions $options, string $name, string $lib = VueConstants::JS_VUE_LIB){       
+    public static function CheckBindAttribute($attrib, $key){
+        foreach(["v-bind:",":"] as $k){
+            $s=$k.$key;
+            if (key_exists($s, $attrib)){
+                return igk_createobj(['key'=>$s, "value"=>igk_getv($attrib, $s)]);
+            }
+        }
+        return null;
+    }
+    /**
+     * add chain library to options
+     * @param VueSFCRenderNodeVisitorOptions $options 
+     * @param string $name 
+     * @param string $lib 
+     * @return void 
+     */
+    public static function AddLib(VueSFCRenderNodeVisitorOptions $options, string $name, string $lib = VueConstants::JS_VUE_LIB){       
         if (!isset($options->libraries[$lib])){
             $options->libraries[$lib] = [];
         }
@@ -33,18 +49,22 @@ abstract class VueSFCUtility{
         }
         return igk_getv($buildin, strtolower($tagname));
     }
-    public static function ResolveComponent($tagname, $options, $meth=VueConstants::VUE_METHOD_RESOLVE_COMPONENT){
+    public static function ResolveComponent($tagname,  & $attrs, & $v_slot, $options, $meth=VueConstants::VUE_METHOD_RESOLVE_COMPONENT){
         $c = $options;
         $globl = strtolower($c->global_prefix.'c'); 
         $rname = StringUtility::CamelClassName($tagname);
         $tag = strtolower($c->component_prefix.$rname);
         if (!isset($c->defineGlobal[$globl])){
-            $c->defineGlobal[$globl]= 'const '.$globl.'=(q,n)=>(n in q)?((f)=>typeof(f)=="function"?f():(()=>f)())(q[n]):'.
+            $c->defineGlobal[$globl]= 'const '.$globl.'=(q,n)=>(n in q)?((f)=>typeof(f)==\'function\'?f():(()=>f)())(q[n]):'.
             $meth.'(n);';
         }
         if (!isset($c->defineArgs[$tag])){   
             self::AddLib($c, $meth); 
             $c->defineArgs[$tag] = sprintf('const %s=%s(this,\'%s\');', $tag, $globl, $rname);
+        }
+        if (key_exists($k = 'v-slot', $attrs )){
+            $v_slot = igk_getv($attrs, $k);
+            unset($attrs[$k]);
         }
         return $tag;
     }

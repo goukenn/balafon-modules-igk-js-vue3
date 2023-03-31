@@ -55,7 +55,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor{
 
         $options->components['RouterView'] = 1;
         $options->components['RouterLink'] = 1;
-        
+
         $visitor->visit();
         if ($is_local){
             if($options->libraries){
@@ -109,24 +109,27 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor{
         
         //treat special tag before rendering
         if ($this->isBuildInComponent($tagname)){
-            $s->append($this->resolveBuildInComponent($tagname, $v_slot));            
+            $s->append($this->resolveBuildInComponent($tagname, $attrs, $v_slot, $has_childs));            
         } else if ($this->isResolvableComponent($tagname)){
-            $s->append($this->resolveComponent($tagname, $v_slot));            
+            $s->append($this->resolveComponent($tagname, $attrs, $v_slot, $has_childs));            
         }
         else{        
             $s->append(igk_str_surround($tagname,"'"));
         }
         $ch = ',';
         if($attrs){
-            if (!$preserve && isset($attrs['v-pre'])){
+            if (!$preserve && isset($attrs[$tk = 'v-pre'])){
                 array_unshift($this->m_preservelist, $t);
-                unset($attrs['v-pre']);
+                unset($attrs[$tk]);
             }
             if ($preserve){
                 $s->append(sprintf('{%s}', ArrayMapKeyValue::Map([self::class, 'LeaveAttribute'], $attrs)));
             } else {
                 $s->append($ch."{");
                 $ch = '';
+                
+                // + | pretreat directive attribute  
+
                 foreach($attrs as $k=>$v){
                     $s->append($ch.self::_GetKey($k).":".self::_GetValue($v, $context));
                     $ch = ',';
@@ -151,7 +154,11 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor{
         }
 
         if ($has_childs){
-            $s->append($ch."[");
+            $s->append($ch);
+            if ($v_slot){
+                $s->append(sprintf('(%s)=>',is_string($v_slot)?$v_slot:''));
+            }
+            $s->append("[");
             if ($inner_content){
                 self::AddLib($this->m_options, VueConstants::VUE_COMPONENT_TEXT);
                 $this->m_sb->append($tch.VueConstants::VUE_METHOD_RENDER.self::GetTextDefinition($inner_content).",");
@@ -177,13 +184,10 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor{
     #endregion
 
     protected static function AddLib(VueSFCRenderNodeVisitorOptions $options, string $name, string $lib = VueConstants::JS_VUE_LIB){
-        if (!isset($options->libraries[$lib])){
-            $options->libraries[$lib] = [];
-        }
-        $options->libraries[$lib][$name] = 1;
+        VueSFCUtility::AddLib($options, $name, $lib); 
     }
-    protected static function GetTextDefinition($content){
-        return sprintf('(%s,%s)', VueConstants::VUE_COMPONENT_TEXT, $content);
+    protected static function GetTextDefinition($content, $context=null){
+        return sprintf('(%s,%s)', VueConstants::VUE_COMPONENT_TEXT, self::_GetValue($content, $context));
     }
 
     protected static function _GetLitteralLibrary($lib, $type='const'){

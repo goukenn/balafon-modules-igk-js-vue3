@@ -23,9 +23,9 @@ class VueGenerateRenderJSMethodTest extends ModuleBaseTestCase{
         );
     }
     function test_render_text(){
-        $n = new HtmlTextNode("hello");        ;
+        $n = new HtmlTextNode("hello"); 
         $this->assertEquals(
-            'render(){const{h,Text}=Vue;return h(Text,hello)}',
+            "render(){const{h,Text}=Vue;return h(Text,'hello')}",
             VueSFCCompiler::ConvertToVueRenderMethod($n)
         );
     }
@@ -53,16 +53,27 @@ class VueGenerateRenderJSMethodTest extends ModuleBaseTestCase{
         $n->add('router-view');
         $this->assertEquals(
             'render(){const{h,resolveComponent}=Vue;const $__c=(q,n)=>(n in q)?'.
-            '((f)=>typeof(f)=="function"?f():(()=>f)())(q[n]):resolveComponent(n);const _vue_routerview=$__c(this,\'RouterView\');return h(\'div\',[h(_vue_routerview)])}',
+            '((f)=>typeof(f)==\'function\'?f():(()=>f)())(q[n]):resolveComponent(n);const _vue_routerview=$__c(this,\'RouterView\');return h(\'div\',[h(_vue_routerview)])}',
             VueSFCCompiler::ConvertToVueRenderMethod($n)
         );
     }
     function test_render_with_dyn_component(){
         $n = igk_create_node();
-        $n->add( new VueComponentNode);
+        $g = new VueComponentNode;
+        $g->vBind('is', 'Foo');
+        $n->add($g); 
         $this->assertEquals(
-            'render(){const{h,resolveComponent}=Vue;const $__c=(q,n)=>(n in q)?'.
-            '((f)=>typeof(f)=="function"?f():(()=>f)())(q[n]):resolveComponent(n);const _vue_routerview=$__c(this,\'RouterView\');return h(\'div\',[h(_vue_routerview)])}',
+            'render(){const{h,resolveDynamicComponent}=Vue;return h(\'div\',[h(resolveDynamicComponent(Foo))])}',
+            VueSFCCompiler::ConvertToVueRenderMethod($n)
+        );
+    }
+
+    function test_render_with_v_slot(){
+        $n = igk_create_node();
+      
+        $n->load("<router-view v-slot=\"{Component}\"><transition><component :is='Component'></component></transition></router-view>");
+        $this->assertEquals(
+            "render(){const{h,resolveComponent,resolveDynamicComponent,Transition}=Vue;const \$__c=(q,n)=>(n in q)?((f)=>typeof(f)=='function'?f():(()=>f)())(q[n]):resolveComponent(n);const _vue_routerview=\$__c(this,'RouterView');return h('div',[h(_vue_routerview,({Component})=>[h(Transition,()=>[h(resolveDynamicComponent(Component))])])])}",            
             VueSFCCompiler::ConvertToVueRenderMethod($n)
         );
     }

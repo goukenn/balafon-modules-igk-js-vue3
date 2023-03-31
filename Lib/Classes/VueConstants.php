@@ -27,14 +27,15 @@ class VueConstants{
 
     const VUE_METHOD_RENDER = 'h';
     const VUE_METHOD_DEFINE_COMPONENT = 'defineComponent';
-    const VUE_METHOD_DEFINE_DYNAMIC_COMPONENT = 'defineDynamicComponent';
+    const VUE_METHOD_DEFINE_ASYBC_COMPONENT = 'defineAsyncComponent';
     const VUE_METHOD_RESOLVE_COMPONENT = 'resolveComponent';
     const VUE_METHOD_RESOLVE_DYNAMIC_COMPONENT = 'resolveDynamicComponent';
 
     const VUE_COMPONENT_TEXT = 'Text';
     const VUE_COMPONENT_TRANSITION = 'Transition'; 
 
-    const VUE_BUILDIN_COMPONENT = 'Text|Teleport|Transition|TransitionGroup|Component|Template';
+    const VUE_BUILDIN_COMPONENT = 'KeepAlive|Slot|Text|Teleport|Transition|TransitionGroup|Component|Template';
+    const VUE_BUILDIN_SPECIAL_COMPONENT = 'Slot|Component|Template';
 
 
 }

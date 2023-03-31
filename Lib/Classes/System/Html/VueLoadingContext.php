@@ -4,7 +4,7 @@
 // @filename: VueLoadingContext.php
 // @date: 20230109 09:35:04
 // @desc: 
-namespace igk\js\Vue3\Html;
+namespace igk\js\Vue3\System\Html;
 
 use IGK\System\Html\Dom\HtmlNode;
 use IGK\System\Html\HtmlLoadingContext;

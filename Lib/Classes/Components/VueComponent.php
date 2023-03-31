@@ -1,7 +1,7 @@
 <?php
 namespace igk\js\Vue3\Components;
  
-use igk\js\Vue3\Html\VueLoadingContext;
+use igk\js\Vue3\System\Html\VueLoadingContext;
 use igk\js\Vue3\VueConstants;
 use IGK\System\Html\Dom\HtmlNode;
 use IGK\System\Html\HtmlLoadingContext;

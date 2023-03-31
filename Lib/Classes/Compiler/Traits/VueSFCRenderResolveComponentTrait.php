@@ -18,7 +18,7 @@ trait VueSFCRenderResolveComponentTrait{
         $tag = StringUtility::CamelClassName($tagname);
         return key_exists($tag, $this->m_options->components);
     }
-    public function resolveComponent($tagname){        
-        return VueSFCUtility::ResolveComponent($tagname, $this->m_options);
+    public function resolveComponent($tagname, & $attrs, & $v_slot){        
+        return VueSFCUtility::ResolveComponent($tagname, $attrs, $v_slot, $this->m_options);
     }
 }

@@ -8,7 +8,7 @@ use IGK\System\Html\Dom\HtmlItemBase;
 
 igk_require_module(\igk\js\common::class);
 require_once $this->m_dir . "/Lib/Classes/VueConstants.php";
-require_once $this->m_dir . "/Lib/Classes/Html/MacrosExtensions.php";
+require_once $this->m_dir . "/Lib/Classes/System/Html/VueMacrosExtensions.php";
 
 $reg("initDoc", function ($doc) {
     if (igk_environment()->{"vue3.importmap"}) {
@@ -31,7 +31,7 @@ $reg("initDoc", function ($doc) {
 
 // + | register macros  - that enable use of function to external node behaviour
 
-HtmlItemBase::RegisterMacros(VueConstants::WEB_CONTEXT, \igk\js\Vue3\Html\MacrosExtensions::class);
+HtmlItemBase::RegisterMacros(VueConstants::WEB_CONTEXT, \igk\js\Vue3\System\Html\VueMacrosExtensions::class);
 
 // + module definition
 return [

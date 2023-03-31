@@ -1,6 +1,10 @@
 <?php
+// @author: C.A.D. BONDJE DOUE
+// @filename: VueMacrosExtensions.php
+// @date: 20230331 10:43:47
+// @desc: 
 
-namespace igk\js\Vue3\Html;
+namespace igk\js\Vue3\System\Html;
 
 use igk\js\Vue3\Components\VueComponentNode;
 use igk\js\Vue3\Components\VueCustomComponentNode;
@@ -11,6 +15,7 @@ use igk\js\Vue3\Components\VueTemplate;
 use igk\js\Vue3\Components\VueTransition;
 use igk\js\Vue3\Components\VueTransitionGroup;
 use igk\js\Vue3\System\WinUI\Menus\RouterMenuBuilder;
+use igk\js\VueJS\Html\RouterView;
 use IGK\System\Exceptions\EnvironmentArrayException;
 use IGK\System\Html\Dom\HtmlNode;
 use IGKException;
@@ -19,7 +24,7 @@ use IGKException;
  * vue macros extension helper - bind vue attribute mecanism / node 
  * @package igk\js\Vue3\Html
  */
-abstract class MacrosExtensions{
+abstract class VueMacrosExtensions{
     private function __construct(){        
     }
     //--------------------------------------------------------------
@@ -336,6 +341,14 @@ abstract class MacrosExtensions{
         $ul["class"] = "igk-menu igk-vue-menu";
         igk_html_build_menu($ul, $menus, new RouterMenuBuilder);
         return $ul;
+    }
+
+    public static function vRouterViewWithTransition(HtmlNode $node){
+        $n = new VueRouterView;
+        $n->setAttribute('v-slot', '{ Component }');
+        $n->vTransition()->vComponent()->vBind('is', 'Component');
+        $node->add($n);
+        return $n;
     }
     
     public static function __callStatic($name, $arg){
