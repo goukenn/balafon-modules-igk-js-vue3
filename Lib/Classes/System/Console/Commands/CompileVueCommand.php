@@ -9,8 +9,7 @@ namespace igk\js\Vue3\System\Console\Commands;
 
 use IGK\Helper\FileBuilderHelper;
 use IGK\Helper\IO;
-use igk\js\common\JSExpression;
-use igk\js\Vue3\System\Console\VueCommandBase;
+use igk\js\common\JSExpression; 
 use IGK\System\Console\Logger;
 use IGK\System\Shell\OsShell;
 use igk\webpack\WebpackGeneratorInfo;
@@ -19,8 +18,7 @@ use igk\webpack\WebpackManifestInfo;
 use igk\webpack\WebpackManifestRule;
 
 class CompileVueCommand extends VueCommandBase
-{
-    var $category = "vue";
+{ 
     var $command = "--vue3:compile-vue";
 
     var $distName = 'dist';

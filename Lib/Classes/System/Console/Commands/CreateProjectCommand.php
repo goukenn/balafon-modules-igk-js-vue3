@@ -1,10 +1,13 @@
 <?php
+// @author: C.A.D. BONDJE DOUE
+// @filename: CreateProjectCommand.php
+// @date: 20230330 19:03:51
+// @desc: create a vue project and store it to project dev
 
 namespace igk\js\Vue3\System\Console\Commands;
 
 use IGK\Helper\IO;
-use IGK\Helper\JSon;
-use igk\js\Vue3\System\Console\VueCommandBase;
+use IGK\Helper\JSon; 
 use IGK\System\Console\Logger;
 use IGK\System\IO\Path;
 use IGK\System\Shell\OsShell;

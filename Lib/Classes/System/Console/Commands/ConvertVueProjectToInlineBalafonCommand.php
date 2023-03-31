@@ -5,12 +5,10 @@
 namespace igk\js\Vue3\System\Console\Commands;
 
 use IGK\Controllers\BaseController;
-use IGK\Helper\IO;
-use igk\js\Vue3\System\Converter\VueInlineProjectConverter;
-use IGK\System\Console\Commmands\ModuleExecCommandBase;
+use IGK\Helper\IO; 
+use igk\js\Vue3\System\Converter\VueInlineProjectConverter; 
 use IGK\System\Console\Logger;
-use IGK\System\IO\Path;
-use IGK\Tests\Controllers\ModuleBaseTestCase;
+use IGK\System\IO\Path; 
 use IGKException;
 
 ///<summary></summary>
@@ -18,7 +16,7 @@ use IGKException;
 * use to convert existing vue3 project 
 * @package igk\js\Vue3\System\Console\Commands
 */
-class ConvertVueProjectToInlineBalafonCommand extends ModuleExecCommandBase{
+class ConvertVueProjectToInlineBalafonCommand extends VueCommandBase{
     var $command = '--vue3:convert';
     var $cat = "vue3";
     var $options=[

@@ -14,6 +14,8 @@ use igk\js\common\JSExpressionObjectResult;
 use igk\js\Vue3\Controllers\MacrosExtensions;
 use igk\js\Vue3\JS\VueLazyImportExpression;
 use igk\js\Vue3\JS\VueLazyLoadExpression;
+use igk\js\Vue3\Libraries\VueLibraryBase;
+use igk\js\Vue3\Libraries\VueRouter;
 use IGK\System\Exceptions\ArgumentTypeNotValidException;
 use IGK\System\Html\Dom\HtmlNode;
 use IGK\System\Html\HtmlContext;
@@ -30,7 +32,17 @@ use ReflectionException;
  */
 abstract class VueHelper
 {
-  
+    public static function InitRoute($doc, BaseController $ctrl=null, ?string $name=null){
+        return VueRouter::InitDoc($doc, $ctrl);
+    }
+    /**
+     * use script file as library to inject to view app core definition before createAppMethod 
+     * @param string $file 
+     * @return null|VueLibraryBase 
+     */
+    public static function UseScriptLibrary(string $file):?VueLibraryBase{
+        return null;
+    }
     public static function IncRouteOptions(string $path, $args=[], $routeOptions =[],  BaseController $ctrl=null){
         $defs = [];
         $defs['template']= ViewHelper::Article($path, $args);

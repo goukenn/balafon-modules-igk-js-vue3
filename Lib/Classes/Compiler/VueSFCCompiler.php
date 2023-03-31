@@ -4,8 +4,13 @@
 // @date: 20230301 18:54:08
 namespace igk\js\Vue3\Compiler;
 
+use Closure;
+use IGK\System\Exceptions\ArgumentTypeNotValidException;
 use IGK\System\Html\Css\CssParser;
+use IGK\System\Html\Dom\HtmlItemBase;
 use IGK\System\Html\Dom\HtmlNode;
+use IGKException;
+use ReflectionException;
 
 ///<summary></summary>
 /**
@@ -31,6 +36,18 @@ class VueSFCCompiler{
      */
     private $m_options = null;
 
+    /**
+     * convert node to render methods 
+     * @param HtmlItemBase $node 
+     * @return string 
+     * @throws IGKException 
+     * @throws ArgumentTypeNotValidException 
+     * @throws ReflectionException 
+     */
+    public static function ConvertToVueRenderMethod(HtmlItemBase $node, $options=null):?string{
+            
+        return VueSFCRenderNodeVisitor::GenerateRenderMethod($node, $options);
+    }
 
     private static function _GetLitteralResult($src)
     {  
@@ -82,7 +99,7 @@ class VueSFCCompiler{
         }
         $this->template = $a->getInnerHtml();
     }
-    public static function ParseCssStyleToCss($src, ?string $scoped_id=null){
+    public function parseCssStyleToCss($src, ?string $scoped_id=null){
         $tab = CssParser::Parse($src);
         $id = $scoped_id;
         if ($id){
@@ -108,7 +125,7 @@ class VueSFCCompiler{
         $scoped = igk_getv($a, "scoped");
         $src = $a->getInnerHtml();
         $id = $scoped ? $this->id : null;
-        $src = self::ParseCssStyleToCss($src, $id);        
+        $src = $this->parseCssStyleToCss($src, $id);        
         if (is_null($this->styles)) {
             $this->styles = "";
         }

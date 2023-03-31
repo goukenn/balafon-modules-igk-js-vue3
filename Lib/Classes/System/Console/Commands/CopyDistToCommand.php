@@ -8,8 +8,7 @@
 
 namespace igk\js\Vue3\System\Console\Commands;
  
-use IGK\Helper\IO; 
-use igk\js\Vue3\System\Console\VueCommandBase;
+use IGK\Helper\IO;  
 use IGK\System\Console\Logger;
 use IGK\System\IO\Path;
 use IGK\System\Regex\Replacement; 
@@ -21,10 +20,8 @@ use function igk_resources_gets as __;
  */
 class CopyDistToCommand extends VueCommandBase
 {
-    var $category = "vue";
     var $command = "--vue3:copy-dist";
     var $desc = "copy distibution to controller assets";
-
     var $distName = 'dist';
 
     public function exec($command, ?string $controller = null, ?string $dir = null, $appName="vue-app")

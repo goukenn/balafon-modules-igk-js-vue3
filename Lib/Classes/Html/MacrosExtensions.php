@@ -230,13 +230,21 @@ abstract class MacrosExtensions{
      * @throws IGKException 
      * @throws EnvironmentArrayException 
      */
-    public static function vComponent(HtmlNode $node, string $name, $expectedTag=''){
-        $n = new VueCustomComponentNode($name);
+    public static function vComponent(HtmlNode $node){
+        $n = new VueComponentNode();
         $node->add($n);
         return $n;
     }
-    public static function vComponentNode(HtmlNode $node, string $name, $expectedTag=''){
-        $n = new VueComponentNode($name, $expectedTag);
+    /**
+     * create a custom component node
+     * @param HtmlNode $node 
+     * @param string $name 
+     * @return VueCustomComponentNode 
+     * @throws IGKException 
+     * @throws EnvironmentArrayException 
+     */
+    public static function vComponentNode(HtmlNode $node, string $name){
+        $n = new VueCustomComponentNode($name);
         $node->add($n);
         return $n;
     }

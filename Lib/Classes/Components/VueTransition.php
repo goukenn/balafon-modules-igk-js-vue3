@@ -40,10 +40,10 @@ class VueTransition extends VueComponent
         $g = new VueTransitionComponent();
         return $this->add($g);
     }
-    protected function _Add($n, $force = false)
+    protected function _add($n, $force = false):bool
     {
         ($this->getChildCount() == 0) || igk_die("transition already have child");
-        return parent::_Add($n, $force);
+        return parent::_add($n, $force);
     }
     /**
      * on before enter js method
