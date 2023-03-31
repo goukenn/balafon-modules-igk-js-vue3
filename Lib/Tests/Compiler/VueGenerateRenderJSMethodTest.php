@@ -4,6 +4,7 @@
 // @date: 20230331 01:03:37
 namespace igk\js\Vue3\Compiler;
 
+use igk\js\Vue3\Components\VueComponentNode;
 use IGK\System\Html\Dom\HtmlTextNode;
 use IGK\Tests\Controllers\ModuleBaseTestCase;
 
@@ -51,7 +52,17 @@ class VueGenerateRenderJSMethodTest extends ModuleBaseTestCase{
         $n = igk_create_node();
         $n->add('router-view');
         $this->assertEquals(
-            'render(){const{defineComponent,h}=Vue;return h(\'div\',[h(_vue_router_view)])}',
+            'render(){const{h,resolveComponent}=Vue;const $__c=(q,n)=>(n in q)?'.
+            '((f)=>typeof(f)=="function"?f():(()=>f)())(q[n]):resolveComponent(n);const _vue_routerview=$__c(this,\'RouterView\');return h(\'div\',[h(_vue_routerview)])}',
+            VueSFCCompiler::ConvertToVueRenderMethod($n)
+        );
+    }
+    function test_render_with_dyn_component(){
+        $n = igk_create_node();
+        $n->add( new VueComponentNode);
+        $this->assertEquals(
+            'render(){const{h,resolveComponent}=Vue;const $__c=(q,n)=>(n in q)?'.
+            '((f)=>typeof(f)=="function"?f():(()=>f)())(q[n]):resolveComponent(n);const _vue_routerview=$__c(this,\'RouterView\');return h(\'div\',[h(_vue_routerview)])}',
             VueSFCCompiler::ConvertToVueRenderMethod($n)
         );
     }

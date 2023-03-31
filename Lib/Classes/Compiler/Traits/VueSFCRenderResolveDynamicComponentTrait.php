@@ -1,6 +1,6 @@
 <?php
 // @author: C.A.D. BONDJE DOUE
-// @file: VueSFCRenderResolveComponentTrait.php
+// @file: VueSFCRenderResolveDynamicComponentTrait.php
 // @date: 20230331 04:50:33
 namespace igk\js\Vue3\Compiler\Traits;
 
@@ -13,12 +13,12 @@ use igk\js\Vue3\VueConstants;
 * 
 * @package igk\js\Vue3\Compiler\Traits
 */
-trait VueSFCRenderResolveComponentTrait{
+trait VueSFCRenderResolveDynamicComponentTrait{
     public function isResolvableComponent($tagname){
         $tag = StringUtility::CamelClassName($tagname);
         return key_exists($tag, $this->m_options->components);
     }
-    public function resolveComponent($tagname){        
-        return VueSFCUtility::ResolveComponent($tagname, $this->m_options);
+    public function resolveComponent($tagname){
+        return VueSFCUtility::ResolveComponent($tagname, $this->m_options, VueConstants::VUE_METHOD_RESOLVE_DYNAMIC_COMPONENT);       
     }
 }
