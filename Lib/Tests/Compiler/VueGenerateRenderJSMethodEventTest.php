@@ -40,4 +40,23 @@ class VueGenerateRenderJSMethodEventTest extends ModuleBaseTestCase
             VueSFCCompiler::ConvertToVueRenderMethod($d)
         );
     }
+
+    public function test_render_vhtml_skip_content(){
+        $d = new VueComponent('div');
+        $d->div()->vHtml("<i>hello friend</i>")->span()->vFor('i in [1,3,4]')->div()->Content = 'finish';
+        //igk_wln_e($d->render());
+        $this->assertEquals(
+            "render(){const{h}=Vue;return h('div',[h('div',{innerHTML:'<i>hello friend</i>'})])}",
+            VueSFCCompiler::ConvertToVueRenderMethod($d)
+        );
+    }
+    public function test_render_vtext_skip_content(){
+        $d = new VueComponent('div');
+        $d->div()->vText("<i>hello friend</i>")->span()->vFor('i in [1,3,4]')->div()->Content = 'finish';
+  
+        $this->assertEquals(
+            "render(){const{h}=Vue;return h('div',[h('div',{innerText:'<i>hello friend</i>'})])}",
+            VueSFCCompiler::ConvertToVueRenderMethod($d)
+        );
+    }
 }

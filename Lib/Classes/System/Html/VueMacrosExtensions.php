@@ -105,6 +105,15 @@ abstract class VueMacrosExtensions{
     public static function vHtml(HtmlNode $node, string $expression){
         return $node->setAttribute('v-html', $expression); 
     }
+     /**
+     * force render html expression
+     * @param HtmlNode $node 
+     * @param string $expression 
+     * @return HtmlNode 
+     */
+    public static function vText(HtmlNode $node, string $expression){
+        return $node->setAttribute('v-text', $expression); 
+    }
     public static function vOnce(HtmlNode $node){
         return $node->activate('v-once'); 
     }

@@ -46,6 +46,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     private $m_loop_group = [];
     private $m_directives = []; // chain directive
     private $m_single_item; // single item flags - to skip [...]
+    protected $skip =false; // skip flag for v-html and v-text
     private function __construct(HtmlItemBase $node)
     {
         parent::__construct($node);
@@ -131,6 +132,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         $v_conditional = false;
         $v_loop = false;
         $v_directives = [];
+        $v_skip = false;
         if (empty($tagname) || !$canrender) {
             return null;
         }
@@ -153,7 +155,19 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             }
             if ($preserve) {
                 $s->append(sprintf('{%s}', ArrayMapKeyValue::Map([self::class, 'LeaveAttribute'], $attrs)));
-            } else {               
+            } else { 
+                if (key_exists($ck = 'v-html', $attrs)) {
+                    $v_skip = true;
+                    $content = igk_getv($attrs, $ck);
+                    unset($attrs[$ck]);
+                }
+                if (key_exists($ck = 'v-text', $attrs)) {
+                    $v_skip = true;
+                    $content = igk_getv($attrs, $ck);
+                    $attrs['innerText'] = $content;
+                    $content = '';
+                    unset($attrs[$ck]);
+                }
                 // + | pre-treat directive attribute  
                 if ($this->isConditionnal($t, $attrs, $first_child, $last_child)) {
                     $v_conditional = true;
@@ -210,6 +224,11 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             $this->m_sb->append($tch);
         }
         $this->m_sb->append($s);
+        if(  $v_skip ){
+            $this->m_sb->rtrim('[,');
+            $this->skip = true;
+            return null;
+        }
         return true;
     }
     protected function endVisit(HtmlItemBase $t, bool $has_childs, bool $last)
