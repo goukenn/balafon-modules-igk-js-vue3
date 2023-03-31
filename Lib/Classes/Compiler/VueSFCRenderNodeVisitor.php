@@ -11,6 +11,7 @@ use igk\js\Vue3\Compiler\Traits\VueSFCRenderTextTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderVisitTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderResolveComponentTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatBindingAttributeTraitTrait;
+use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatDirectiveAttributeTrait; 
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatEventAttributeTrait;
 use igk\js\Vue3\VueConstants;
 use IGK\System\ArrayMapKeyValue;
@@ -34,6 +35,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     use VueSFCRenderResolveComponentTrait;
     use VueSFCRenderTreatEventAttributeTrait;
     use VueSFCRenderTreatBindingAttributeTraitTrait;
+    use VueSFCRenderTreatDirectiveAttributeTrait;
 
 
     private $m_sb;
@@ -42,6 +44,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     private $m_conditionals = []; // store conditionals - on detection 
     private $m_conditional_group = []; //store conditional group
     private $m_loop_group = [];
+    private $m_directives = []; // chain directive
     private $m_single_item; // single item flags - to skip [...]
     private function __construct(HtmlItemBase $node)
     {
@@ -127,6 +130,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         $v_slot = false;
         $v_conditional = false;
         $v_loop = false;
+        $v_directives = [];
         if (empty($tagname) || !$canrender) {
             return null;
         }
@@ -157,8 +161,9 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 if ($this->isLoop($t, $attrs)){
                   $v_loop= true;
                 }   
+             
                 // + | treat event - and binding                
-                if ($g_attr = self::_GetAttributeStringDefinition($attrs, $content, $context, $this->m_options)){
+                if ($g_attr = self::_GetAttributeStringDefinition($attrs, $content, $context, $this->m_options, $v_directives)){
                     $s->append($ch . "{".$g_attr."}");                    
                     $ch = ',';
                     $content = '';
@@ -187,13 +192,16 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 $this->m_sb->append($tch . VueConstants::VUE_METHOD_RENDER . self::GetTextDefinition($inner_content) . ",");
             }
         }
-        if ($v_conditional || $v_loop) {
+        if ($v_conditional || $v_loop || $v_directives) {
             if ($v_conditional){
                 // backup current buffer
                 $this->m_conditionals[0]->sb = $this->m_sb;            
             }
             if ($v_loop){
                 $this->m_loop_group[0]->sb = $this->m_sb;
+            }
+            if ($v_directives){
+                array_unshift($this->m_directives, (object)['t'=>$t, 'd'=>$v_directives]);
             }
             // start a new buffer
             $this->m_sb = new StringBuilder();
@@ -234,6 +242,19 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             }
         }
 
+        if ($this->m_directives){
+            // surround with directive declaration 
+            $q = $this->m_directives[0];
+            $vs =  '';
+            $dch = '';
+            while(count($q->d)>0){
+                $tq = array_shift($q->d);
+                $vs = $dch.'['.implode(',', $tq).']';
+                $dch = ',';
+            }
+            $this->m_sb->set(sprintf(VueConstants::VUE_METHOD_WITH_DIRECTIVES. '(%s,[%s])', $this->m_sb, $vs));
+        }
+
         // check to close conditional 
         if ($this->m_conditionals) {
             if ($this->m_conditionals[0]->t === $t) {
@@ -263,23 +284,35 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     }
     #endregion
 
-    protected static function _GetAttributeStringDefinition($attrs, $content, $context, $options){
+    protected static function _GetAttributeStringDefinition($attrs, $content, $context, $options, & $directives){
         $s = '';
         $ch = '';
+        $ln = $m = 0;
         foreach ($attrs as $k => $v) {
+            if ($ln!=strlen($s)){
+                $ch=',';
+            }
+            $s.= $ch;
+            $ln = strlen($s);
+
             if (preg_match("/^(v-on:|@)/", $k)){
-                $s.= self::TreatEventAttribute($options, $k, $v, $ch,$context);
-                $ch = ',';
+                $s.= self::TreatEventAttribute($options, $k, $v, $context);                
                 continue;
             }
             if (preg_match("/^v-bind?:/", $k)){
-                $s.= self::TreatBindingAttribute($k, $v, $ch, $context);
-                $ch = ',';
+                $s.= self::TreatBindingAttribute($k, $v, $  $context);                
                 continue;
             }
+            if (preg_match("/^v-([^:]+):/", $k)){
+                $s.= self::TreatDirectiveAttribute($directives, $options, $k, $v,  $context); 
+                continue;
+            }            
             $s .= ($ch . self::_GetKey($k) . ":" . self::_GetValue($v, $context));
-            $ch = ',';
+            
         }
+        if ($ln!=strlen($s)){
+            $ch=',';
+        }        
         if ($content) {
             $s .= ($ch . 'innerHTML:' . self::_GetValue($content, $context));
             $content = '';

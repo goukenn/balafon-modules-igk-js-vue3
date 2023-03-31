@@ -118,6 +118,17 @@ abstract class VueMacrosExtensions{
             return $i;
         }
     }
+    /**
+     * attach directive to node . prefix with v- \
+     * syntax v-[name]:property.modifier=value
+     * @param HtmlNode $node 
+     * @param string $attribute 
+     * @param mixed $value 
+     * @return void 
+     */
+    public static function vDirective(HtmlNode $node, string $attribute, $value){
+        return $node->setAttribute('v-'.$attribute, $value); 
+    }
    
     /**
      * add event handler bind attribute 

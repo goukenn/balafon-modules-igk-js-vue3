@@ -90,6 +90,7 @@ class VueTransition extends VueComponent
         $this->vOn("leave-cancelled", $value);
         return $this;
     }
+    
     /**
      * must appear during vue transition
      * @return $this 

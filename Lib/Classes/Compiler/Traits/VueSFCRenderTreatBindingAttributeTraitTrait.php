@@ -15,7 +15,7 @@ use IGK\System\Regex\Replacement;
 */
 trait VueSFCRenderTreatBindingAttributeTraitTrait{
     use VueSFCRenderTreatGetExpressionValueTrait;
-    public static function TreatBindingAttribute($key, $v, $ch='', $context=null){
+    public static function TreatBindingAttribute($key, $v, $context=null){
         $rp = new Replacement;
         $modifiers = [];
         $rp->addCallable("/\.(?P<name>[^\. ]+)/", function($n)use($modifiers){
@@ -26,7 +26,7 @@ trait VueSFCRenderTreatBindingAttributeTraitTrait{
             return '';
         });
         $key = $rp->replace($key);
-        return ($ch . self::_GetKey($key) . ":" . self::_GetBindingExpressionValue($v, $context));
+        return (self::_GetKey($key) . ":" . self::_GetBindingExpressionValue($v, $context));
     }
     
 }

@@ -16,7 +16,7 @@ use IGK\System\Regex\Replacement;
 */
 trait VueSFCRenderTreatEventAttributeTrait{
     use VueSFCRenderTreatGetExpressionValueTrait;
-    public static function TreatEventAttribute($options, $key, $v, $ch, $context):?string{
+    public static function TreatEventAttribute($options, $key, $v, $context):?string{
         $rp = new Replacement;
         $modifiers = [];
         $rp->addCallable("/\.(?P<name>[^\. ]+)/", function($n)use(& $modifiers){
@@ -35,7 +35,7 @@ trait VueSFCRenderTreatEventAttributeTrait{
             VueSFCUtility::AddLib($options, VueConstants::VUE_METHOD_WITH_MODIFIERS);
             $format =VueConstants::VUE_METHOD_WITH_MODIFIERS. '(()=>{%s},['."'".implode("','",$modifiers)."'])";
         } 
-        return ($ch . self::_GetKey($eventName) . ":" . sprintf($format, self::_GetBindingExpressionValue($v, $context)));
+        return ( self::_GetKey($eventName) . ":" . sprintf($format, self::_GetBindingExpressionValue($v, $context)));
     }
     
 }

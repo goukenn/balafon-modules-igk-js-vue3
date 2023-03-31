@@ -22,11 +22,21 @@ class VueGenerateRenderJSMethodEventTest extends ModuleBaseTestCase
             VueSFCCompiler::ConvertToVueRenderMethod($d)
         );
     }
-    public function test_render_width_modifier(){
+    public function test_render_with_modifier(){
         $d = new VueComponent('div');
         $d->vOn("click.prevent", "()=>console.log('ok')")->setContent('click me');
         $this->assertEquals(
             "render(){const{h,withModifiers}=Vue;return h('div',{onClick:withModifiers(()=>{()=>console.log('ok')},['prevent']),innerHTML:'click me'})}",
+            VueSFCCompiler::ConvertToVueRenderMethod($d)
+        );
+    }
+
+
+    public function test_render_directive(){
+        $d = new VueComponent('div');
+        $d->vDirective("pin:top.animate", 200)->setContent('click me');
+        $this->assertEquals(
+            "render(){const{h,withDirectives}=Vue;return withDirectives(h('div',{innerHTML:'click me'}),[[pin,200,'top',{animate:true}]])}",
             VueSFCCompiler::ConvertToVueRenderMethod($d)
         );
     }
