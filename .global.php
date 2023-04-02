@@ -12,7 +12,8 @@ use igk\js\Vue3\Compiler\VueSFCCompiler;
 use igk\js\Vue3\Components\VueApplicationNode;
 use igk\js\Vue3\Components\VueComponent;
 use igk\js\Vue3\Components\VueComponentNode;
-use igk\js\Vue3\Components\VueTemplateScriptNode;
+use igk\js\Vue3\Components\VueRouterLink;
+use igk\js\Vue3\Components\VueTemplateScriptNode; 
 use IGK\System\Html\Dom\HtmlNoTagNode;
 
 /**
@@ -112,4 +113,12 @@ function igk_html_node_vue_xtemplate(string $id){
 function igk_html_node_vue_component(string $tagname){
     $n = new VueComponent($tagname);
     return $n;
+}
+
+if (!function_exists('igk_html_node_vue_router_link')){
+    function igk_html_node_vue_router_link($to=null){
+        $n = new VueRouterLink();
+        $to && $n->setAttribute('to', $to);
+        return $n;
+    }
 }

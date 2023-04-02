@@ -11,13 +11,14 @@ use igk\js\Vue3\Compiler\Traits\VueSFCRenderTextTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderVisitTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderResolveComponentTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatBindingAttributeTraitTrait;
-use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatDirectiveAttributeTrait; 
+use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatDirectiveAttributeTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatEventAttributeTrait;
 use igk\js\Vue3\VueConstants;
 use IGK\System\ArrayMapKeyValue;
 use IGK\System\Html\Dom\HtmlItemBase;
 use IGK\System\Html\Dom\HtmlTextNode;
 use IGK\System\Html\HtmlVisitor;
+use IGK\System\IO\Configuration\ConfigurationEncoder;
 use IGK\System\IO\StringBuilder;
 use IGKException;
 
@@ -46,7 +47,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     private $m_loop_group = [];
     private $m_directives = []; // chain directive
     private $m_single_item; // single item flags - to skip [...]
-    protected $skip =false; // skip flag for v-html and v-text
+    protected $skip = false; // skip flag for v-html and v-text
     private function __construct(HtmlItemBase $node)
     {
         parent::__construct($node);
@@ -67,7 +68,9 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         $options = Activator::CreateFrom($options, VueSFCRenderNodeVisitorOptions::class);
         $visitor->m_options = $options;
         self::AddLib($options, VueConstants::VUE_METHOD_RENDER, VueConstants::JS_VUE_LIB);
-
+        /**
+         * router component
+         */
         $options->components['RouterView'] = 1;
         $options->components['RouterLink'] = 1;
 
@@ -87,12 +90,14 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 $preload .= implode('', $g);
             }
         }
-        if($visitor->m_conditional_group){
+        if ($visitor->m_conditional_group) {
             $visitor->endConditional(true);
         }
-        return sprintf('render(%s){%sreturn %s}', $args, $preload, $visitor->m_sb . '');
+        if (!empty($res = $visitor->m_sb . '')) {
+            $res = 'return ' . $res;
+        }
+        return sprintf('render(%s){%s%s}', $args, $preload, $res);
     }
-   
 
     #region visit
     /**
@@ -134,6 +139,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         $v_directives = [];
         $v_skip = false;
         if (empty($tagname) || !$canrender) {
+            $this->m_sb->append($tch);
             return null;
         }
         $attrs = $t->getAttributes()->to_array();
@@ -148,14 +154,29 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             $s->append(igk_str_surround($tagname, "'"));
         }
         $ch = ',';
+        if (!$preserve && empty($attrs) && !empty($content) && (strpos($content, '<') !== false)) {
+            $attrs['innerHTML'] = $content;
+            $content = '';
+        }
         if ($attrs) {
             if (!$preserve && isset($attrs[$tk = 'v-pre'])) {
+                $content = $t->getInnerHtml();
                 array_unshift($this->m_preservelist, $t);
                 unset($attrs[$tk]);
+                $v_skip = true;
+                $preserve = true;
             }
             if ($preserve) {
-                $s->append(sprintf('{%s}', ArrayMapKeyValue::Map([self::class, 'LeaveAttribute'], $attrs)));
-            } else { 
+                $self = $this;
+                $data = ArrayMapKeyValue::Map(function ($k, $v) use ($self) {
+                    return $self->LeaveAttribute($k, $v);
+                }, $attrs);
+                $c = new ConfigurationEncoder;
+                $c->delimiter = ',';
+                $c->separator = ':';
+                $data = $c->encode($data);
+                $s->append($ch . sprintf('{%s}', $data));
+            } else {
                 if (key_exists($ck = 'v-html', $attrs)) {
                     $v_skip = true;
                     $content = igk_getv($attrs, $ck);
@@ -172,16 +193,19 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 if ($this->isConditionnal($t, $attrs, $first_child, $last_child)) {
                     $v_conditional = true;
                 }
-                if ($this->isLoop($t, $attrs)){
-                  $v_loop= true;
-                }   
-             
-                // + | treat event - and binding                
-                if ($g_attr = self::_GetAttributeStringDefinition($attrs, $content, $context, $this->m_options, $v_directives)){
-                    $s->append($ch . "{".$g_attr."}");                    
-                    $ch = ',';
-                    $content = '';
-                }                
+                if ($this->isLoop($t, $attrs)) {
+                    $v_loop = true;
+                }
+
+
+                // + | treat event - and binding       
+                if ($attrs || $has_childs|| (strpos($content, '<') !== false)) {
+                    if ($g_attr = self::_GetAttributeStringDefinition($attrs, $content, $context, $this->m_options, $v_directives, $preserve)) {
+                        $s->append($ch . "{" . $g_attr . "}");
+                        $ch = ',';
+                        $content = '';
+                    }
+                }
             }
         } else {
             if ($has_childs) {
@@ -190,7 +214,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             }
         }
         if (!empty(trim($content))) {
-            $content = self::_GetValue($content);
+            $content = self::_GetValue($content, null, $preserve);
             $s->append($ch . $content);
             $ch = ',';
         }
@@ -207,24 +231,23 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             }
         }
         if ($v_conditional || $v_loop || $v_directives) {
-            if ($v_conditional){
+            if ($v_conditional) {
                 // backup current buffer
-                $this->m_conditionals[0]->sb = $this->m_sb;            
+                $this->m_conditionals[0]->sb = $this->m_sb;
             }
-            if ($v_loop){
+            if ($v_loop) {
                 $this->m_loop_group[0]->sb = $this->m_sb;
             }
-            if ($v_directives){
-                array_unshift($this->m_directives, (object)['t'=>$t, 'd'=>$v_directives]);
+            if ($v_directives) {
+                array_unshift($this->m_directives, (object)['t' => $t, 'd' => $v_directives]);
             }
             // start a new buffer
             $this->m_sb = new StringBuilder();
-        }        
-        else {
+        } else {
             $this->m_sb->append($tch);
         }
         $this->m_sb->append($s);
-        if(  $v_skip ){
+        if ($v_skip) {
             $this->m_sb->rtrim('[,');
             $this->skip = true;
             return null;
@@ -242,16 +265,16 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
 
         if ($has_childs) {
             $this->m_sb->rtrim(',');
-            if (!$this->m_single_item){
+            if (!$this->m_single_item) {
                 $this->m_sb->append("]");
             }
             $this->m_single_item = false;
         }
         $this->m_sb->append(")");
 
-        if ($this->m_loop_group){
+        if ($this->m_loop_group) {
             $g = $this->m_loop_group[0];
-            if ($g->t === $t){
+            if ($g->t === $t) {
                 $q = array_shift($this->m_loop_group);
 
                 $src = self::_GetLoopScript($q->v, $this->m_sb);
@@ -261,17 +284,17 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             }
         }
 
-        if ($this->m_directives){
+        if ($this->m_directives) {
             // surround with directive declaration 
             $q = $this->m_directives[0];
             $vs =  '';
             $dch = '';
-            while(count($q->d)>0){
+            while (count($q->d) > 0) {
                 $tq = array_shift($q->d);
-                $vs = $dch.'['.implode(',', $tq).']';
+                $vs = $dch . '[' . implode(',', $tq) . ']';
                 $dch = ',';
             }
-            $this->m_sb->set(sprintf(VueConstants::VUE_METHOD_WITH_DIRECTIVES. '(%s,[%s])', $this->m_sb, $vs));
+            $this->m_sb->set(sprintf(VueConstants::VUE_METHOD_WITH_DIRECTIVES . '(%s,[%s])', $this->m_sb, $vs));
         }
 
         // check to close conditional 
@@ -285,7 +308,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 if ($c->i == 'v-else') {
                     // close conditional group
                     array_push($this->m_conditional_group[0], $c);
-                    $this->endConditional(false); 
+                    $this->endConditional(false);
                 }
                 if ($c->i == 'v-if') {
                     // start conditional group
@@ -303,37 +326,37 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     }
     #endregion
 
-    protected static function _GetAttributeStringDefinition($attrs, $content, $context, $options, & $directives){
+    protected static function _GetAttributeStringDefinition($attrs, $content, $context, $options, &$directives, bool $preserve)
+    {
         $s = '';
         $ch = '';
-        $ln = $m = 0;
+        $ln = 0;
         foreach ($attrs as $k => $v) {
-            if ($ln!=strlen($s)){
-                $ch=',';
+            if ($ln != strlen($s)) {
+                $ch = ',';
             }
-            $s.= $ch;
+            $s .= $ch;
             $ln = strlen($s);
 
-            if (preg_match("/^(v-on:|@)/", $k)){
-                $s.= self::TreatEventAttribute($options, $k, $v, $context);                
+            if (preg_match("/^(v-on:|@)/", $k)) {
+                $s .= self::TreatEventAttribute($options, $k, $v, $context);
                 continue;
             }
-            if (preg_match("/^v-bind?:/", $k)){
-                $s.= self::TreatBindingAttribute($k, $v, $  $context);                
+            if (preg_match("/^v-bind?:/", $k)) {
+                $s .= self::TreatBindingAttribute($k, $v, $context);
                 continue;
             }
-            if (preg_match("/^v-([^:]+):/", $k)){
-                $s.= self::TreatDirectiveAttribute($directives, $options, $k, $v,  $context); 
+            if (preg_match("/^v-([^:]+):/", $k)) {
+                $s .= self::TreatDirectiveAttribute($directives, $options, $k, $v,  $context);
                 continue;
-            }            
-            $s .= ($ch . self::_GetKey($k) . ":" . self::_GetValue($v, $context));
-            
+            }
+            $s .= (self::_GetKey($k) . ":" . self::_GetValue($v, $context));
         }
-        if ($ln!=strlen($s)){
-            $ch=',';
-        }        
+        if ($ln != strlen($s)) {
+            $ch = ',';
+        }
         if ($content) {
-            $s .= ($ch . 'innerHTML:' . self::_GetValue($content, $context));
+            $s .= ($ch . 'innerHTML:' . self::_GetValue($content, $context, $preserve));
             $content = '';
         }
         return $s;
@@ -341,33 +364,34 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
 
 
     #region conditional traitment
-    protected function endConditional($top=false){
-        $c = $this->m_conditional_group[0];  
+    protected function endConditional($top = false)
+    {
+        $c = $this->m_conditional_group[0];
         $r = $this->m_sb;
         $cond = '';
-        $else = 'null';        
+        $else = 'null';
         $sep = 0;
         $else_block = null;
-        while(count($c)>0){
-            $q = array_pop($c);           
-            if($q->i == 'v-else'){
-                $else = $r."";//self::_GetExpression($q->v,true);      
-                $else_block = $q;          
-            }else{
-                $cond = self::_GetExpression($q->v,true);
-                if (($q->first) && (($q->last) || ($else_block && $else_block->last))){
+        while (count($c) > 0) {
+            $q = array_pop($c);
+            if ($q->i == 'v-else') {
+                $else = $r . ""; //self::_GetExpression($q->v,true);      
+                $else_block = $q;
+            } else {
+                $cond = self::_GetExpression($q->v, true);
+                if (($q->first) && (($q->last) || ($else_block && $else_block->last))) {
                     $q->sb->rtrim('[');
                     $this->m_single_item = true;
                 }
-                $q->sb->set(sprintf("%s%s%s?%s" , $q->sb, $sep?'(':'', $cond, $r));
+                $q->sb->set(sprintf("%s%s%s?%s", $q->sb, $sep ? '(' : '', $cond, $r));
                 $sep++;
             }
             $r = $q->sb;
         }
-        if ($top){
-            $r->set(sprintf("[%s:%s]",$r.'',$else));
+        if ($top) {
+            $r->set(sprintf("[%s:%s]", $r . '', $else));
         } else {
-            $r->set(sprintf("%s:%s%s",$r.'',$else,$sep>1?')':''));
+            $r->set(sprintf("%s:%s%s", $r . '', $else, $sep > 1 ? ')' : ''));
         }
         $this->m_sb = $r;
         // $old = $this->m_conditionals[0]->sb;
@@ -389,8 +413,8 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                     't' => $t,
                     'i' => $k,
                     'v' => $v,
-                    'first'=>$first_child,
-                    'last'=>$last_child,
+                    'first' => $first_child,
+                    'last' => $last_child,
                 ]);
             }
         }
@@ -398,29 +422,30 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     }
 
     #endregion 
-   
+
     #region LOOP Traitement
-    public function isLoop($t, & $attrs){
-        if ($loop = igk_getv($attrs, $k = 'v-for')){
+    public function isLoop($t, &$attrs)
+    {
+        if ($loop = igk_getv($attrs, $k = 'v-for')) {
             unset($attrs[$k]);
             array_unshift($this->m_loop_group, (object)[
                 't' => $t,
                 'v' => $loop,
-                'sb'=>null
+                'sb' => null
             ]);
             return true;
         }
         return false;
     }
     #endregion
-   
-    public static function _GetExpression(string $v, $resolve_this = false){
+
+    public static function _GetExpression(string $v, $resolve_this = false)
+    {
         $def = $v;
-        if ($resolve_this){
+        if ($resolve_this) {
             $def = SFCScriptSetup::TransformToThisContext($v);
         }
         return $def;
-
     }
 
     protected static function AddLib(VueSFCRenderNodeVisitorOptions $options, string $name, string $lib = VueConstants::JS_VUE_LIB)
@@ -465,8 +490,9 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         return $o;
     }
 
-    protected static function LeaveAttribute($k, $v)
+    public function LeaveAttribute($k, $v)
     {
+        return [self::_GetKey($k), self::_GetValue($v, null, true)];
     }
 
     public static function _GetLoopScript($cond, $content)
@@ -476,24 +502,33 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         $cond = $tab['cond'];
         $op = $tab['op'];
         $mode = preg_match('/^\{.+\}$/', $tab['cond']) ? 1 : (preg_match('/^\(.+\)$/', $tab['cond']) ? 2 : 0);
-        $exp = $tab['exp']; 
+        $exp = $tab['exp'];
         switch ($mode) {
             case 1:
                 $firstkey = trim(explode(",", substr($cond, 1, -1))[0]);
                 $src = sprintf(<<<'JS'
 (function(l,key){for(key %s l){((%s)=>this.push(%s))(l[key])} return this}).apply([],[%s])
 JS, $op, $cond, $content, $exp);
-            break;
+                break;
             case 2:
-            $firstkey = trim(explode(",", substr($cond, 1, -1))[0]);
-            $src = sprintf('(function(l,key){for(key %op l){((%s)=>this.push(%s))(l[key])}return this}).apply([],[%s])',
-            $op, $firstkey, $content, $exp);
-            break;
+                $firstkey = trim(explode(",", substr($cond, 1, -1))[0]);
+                $src = sprintf(
+                    '(function(l,key){for(key %op l){((%s)=>this.push(%s))(l[key])}return this}).apply([],[%s])',
+                    $op,
+                    $firstkey,
+                    $content,
+                    $exp
+                );
+                break;
 
             default:
                 $firstkey = trim($cond);
-                $src = sprintf('(function(l,key){for(key in l){((%s)=>this.push(%s))(l[key])}return this}).apply([],[%s])',
-                $firstkey, $content, $exp);
+                $src = sprintf(
+                    '(function(l,key){for(key in l){((%s)=>this.push(%s))(l[key])}return this}).apply([],[%s])',
+                    $firstkey,
+                    $content,
+                    $exp
+                );
                 break;
         }
         return $src;

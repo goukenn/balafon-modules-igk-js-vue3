@@ -19,17 +19,17 @@ class VueGenerateRenderJSMethodWithConditionTest extends ModuleBaseTestCase
         $d = new VueComponent('div');
         $d->vIf("x > 50.5 ")->setContent("hello");
         $this->assertEquals(
-            "render(){const{h}=Vue;return [this.x>50.5?h('div',{innerHTML:'hello'}):null]}",
+            "render(){const{h}=Vue;return [this.x>50.5?h('div','hello'):null]}",
             VueSFCCompiler::ConvertToVueRenderMethod($d)
         );
     }
     public function test_render_else()
     {
         $d = new VueComponent('div');
-        $d->load("<div v-if='x > 50.5'>hello </div><div v-else>else what</div>");
+        $d->load("<div v-if='x > 50.5'>hello </div><div v-else>else <b>what</b></div>");
 
         $this->assertEquals(
-            "render(){const{h}=Vue;return h('div',this.x>50.5?h('div',{innerHTML:'hello '}):h('div',{innerHTML:'else what'}))}",
+            "render(){const{h}=Vue;return h('div',this.x>50.5?h('div','hello '):h('div',{innerHTML:'else '},[h('b','what')]))}",
             VueSFCCompiler::ConvertToVueRenderMethod($d)
         );
     }
@@ -38,7 +38,7 @@ class VueGenerateRenderJSMethodWithConditionTest extends ModuleBaseTestCase
         $d = new VueComponent('div');
         $d->load("<div v-if='x > 50.5'>hello </div><div v-else>else what</div><span>Jumping</span>");
         $this->assertEquals(
-            "render(){const{h}=Vue;return h('div',[this.x>50.5?h('div',{innerHTML:'hello '}):h('div',{innerHTML:'else what'}),h('span','Jumping')])}",
+            "render(){const{h}=Vue;return h('div',[this.x>50.5?h('div','hello '):h('div','else what'),h('span','Jumping')])}",
             VueSFCCompiler::ConvertToVueRenderMethod($d)
         );
     }

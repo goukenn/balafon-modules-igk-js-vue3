@@ -11,6 +11,7 @@ use igk\js\Vue3\Components\VueCustomComponentNode;
 use igk\js\Vue3\Components\VueRouterLink;
 use igk\js\Vue3\Components\VueRouterView;
 use igk\js\Vue3\Components\VueSlot;
+use igk\js\Vue3\Components\VueTeleport;
 use igk\js\Vue3\Components\VueTemplate;
 use igk\js\Vue3\Components\VueTransition;
 use igk\js\Vue3\Components\VueTransitionGroup;
@@ -368,6 +369,13 @@ abstract class VueMacrosExtensions{
         $n->setAttribute('v-slot', '{ Component }');
         $n->vTransition()->vComponent()->vBind('is', 'Component');
         $node->add($n);
+        return $n;
+    }
+    public static function vTeleport(HtmlNode $node, string $to = null){
+        $n = new VueTeleport();
+        $node->add($n);
+        $to && $n->setTo($to);
+
         return $n;
     }
     

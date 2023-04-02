@@ -101,6 +101,9 @@ abstract class VueSFCUtility{
             $v_slot = igk_getv($attrs, $k);
             unset($attrs[$k]);
         }
+        if (!$v_slot && isset($options->components[$rname])){
+            $v_slot = true;
+        }
         return $tag;
     }
 }

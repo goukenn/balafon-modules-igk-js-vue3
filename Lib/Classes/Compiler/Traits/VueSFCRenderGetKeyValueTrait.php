@@ -28,7 +28,7 @@ trait VueSFCRenderGetKeyValueTrait{
      * @param mixed $v 
      * @return string 
      */
-    protected static function _GetValue($v, $options=null):?string{
+    protected static function _GetValue($v, $options=null, $preserve=false):?string{
         if (is_null($v)){
             return null;
         }
@@ -40,7 +40,7 @@ trait VueSFCRenderGetKeyValueTrait{
         if (is_numeric($v)){
             return $v;
         }
-        if (preg_match("/{/",$v)){
+        if (!$preserve && preg_match("/{/",$v)){
             // is mustache replace with ${}express
             $v = VueSFCUtility::InterpolateValue($v, '{{', '}}');          
             return igk_str_surround(trim($v, '`'),"`");

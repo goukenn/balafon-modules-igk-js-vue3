@@ -25,5 +25,9 @@ class VueTeleport extends VueComponent{
     {
         parent::initialize();
         $this->setTo("body");
-    }     
+    }  
+    public function __construct()
+    {
+        parent::__construct();
+    }   
 }
