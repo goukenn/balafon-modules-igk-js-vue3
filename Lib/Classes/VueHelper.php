@@ -33,7 +33,7 @@ use ReflectionException;
 abstract class VueHelper
 {
     public static function InitRoute($doc, BaseController $ctrl=null, ?string $name=null){
-        return VueRouter::InitDoc($doc, $ctrl);
+        return VueRouter::InitDoc($doc, $ctrl, $name);
     }
     /**
      * use script file as library to inject to view app core definition before createAppMethod 

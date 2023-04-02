@@ -7,6 +7,8 @@
 // @desc: bue router library
 namespace igk\js\Vue3\Libraries;
 
+use IGK\Controllers\BaseController;
+use IGK\Helper\ViewHelper;
 use igk\js\common\JSAttribExpression;
 use igk\js\common\JSExpression;
 use igk\js\Vue3\JS\VueLazyImportExpression;
@@ -40,10 +42,17 @@ class VueRouter extends VueLibraryBase{
      * @return static 
      * @throws IGKException 
      */
-    public static function InitDoc(IGKHtmlDoc $doc){
+    public static function InitDoc(IGKHtmlDoc $doc, ?BaseController $ctrl=null, string $route_name=null){
         $uri = igk_configs()->get(VueConstants::CNF_VUE_ROUTER_CDN) ?? igk_environment()->isDev()? self::CDN :  self::OPS_CDN;
         $doc->addTempScript($uri)->activate('defer');
         $ref = new static;
+        if ($ctrl){
+            $route_name = $route_name ?? 'vue-router.pinc';
+            ViewHelper::Inc($ctrl->configFile($route_name),[
+                'router'=>$ref,
+                'ctrl'=>$ctrl
+            ]);
+        }
         return $ref;
     }
     /**

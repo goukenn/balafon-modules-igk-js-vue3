@@ -7,6 +7,8 @@ class VueConstants{
     // const API_OPS_URL = "https://unpkg.com/vue@3.2.37/dist/vue.global.prod.js";
     const API_URL = "https://unpkg.com/vue@3.2.47/dist/vue.global.js";
     const API_OPS_URL = "https://unpkg.com/vue@3.2.47/dist/vue.global.prod.js";
+    const API_RUNTIME_URL = "https://unpkg.com/vue@3.2.47/dist/vue.runtime.global.js";
+    const API_RUNTIME_OPS_URL = "https://unpkg.com/vue@3.2.47/dist/vue.runtime.global.prod.js";
     const WEB_CONTEXT = "vue3";
 
     const TEMPLATE_JS_TYPE = 'text/x-template';
