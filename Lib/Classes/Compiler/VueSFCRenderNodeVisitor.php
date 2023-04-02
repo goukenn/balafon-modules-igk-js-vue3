@@ -168,6 +168,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             }
             if ($preserve) {
                 $self = $this;
+                $attrs['innerHTML']  = $content;
                 $data = ArrayMapKeyValue::Map(function ($k, $v) use ($self) {
                     return $self->LeaveAttribute($k, $v);
                 }, $attrs);
@@ -176,6 +177,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 $c->separator = ':';
                 $data = $c->encode($data);
                 $s->append($ch . sprintf('{%s}', $data));
+                $content='';
             } else {
                 if (key_exists($ck = 'v-html', $attrs)) {
                     $v_skip = true;

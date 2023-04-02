@@ -79,7 +79,7 @@ class VueGenerateRenderJSMethodLoopTest extends ModuleBaseTestCase
             ]
         ]);
         $this->assertEquals(
-            "render(){return h('div',{class:'mycomponent'},[h(Teleport,{to:'#offcanvas'},()=>[h('div','Menu teleport'),h('div',{class:'igk-winui-vue-clone menu','igk-data':'#menu'})])])}",
+            "render(){return h('div',{class:'mycomponent'},[h(Teleport,{to:'#offcanvas'},[h('div','Menu teleport'),h('div',{class:'igk-winui-vue-clone menu','igk-data':'#menu'})])])}",
             VueSFCCompiler::ConvertToVueRenderMethod($app_main, $o)
         );
     }
@@ -119,9 +119,7 @@ class VueGenerateRenderJSMethodLoopTest extends ModuleBaseTestCase
             ]
         ]);
         $this->assertEquals(
-            "render(){const{h,resolveComponent}=Vue;const \$__c=(q,n)=>(n in q)?((f)=>typeof(f)=='function'?f():(()=>f)())(q[n]):resolveComponent(n);const _vue_routerview=\$__c(this,'RouterView');return h('div',{class:'mycomponent'},[h('nav',{},'<li><router-link class=\"v-router-link\" ".
-            "to=\"/\">gohome {{ this.x }} </router-link></li>".
-            "<li><router-link class=\"v-router-link\" to=\"/about\">gotoabout</router-link></li>'),h('main',[h(_vue_routerview)])])}",
+            "render(){const{h,resolveComponent}=Vue;const \$__c=(q,n)=>(n in q)?((f)=>typeof(f)=='function'?f():(()=>f)())(q[n]):resolveComponent(n);const _vue_routerview=\$__c(this,'RouterView');return h('div',{class:'mycomponent'},[h('nav',{innerHTML:'<li><router-link class=\"v-router-link\" to=\"/\">gohome {{ this.x }} </router-link></li><li><router-link class=\"v-router-link\" to=\"/about\">gotoabout</router-link></li>'}),h('main',[h(_vue_routerview)])])}",
             VueSFCCompiler::ConvertToVueRenderMethod($app_main, $o)
         );
     }

@@ -33,8 +33,8 @@ trait VueSFCRenderBuildInComponentTrait{
         if(method_exists($this, $fc = '_resolveBuildIn'.StringUtility::CamelClassName($tagname))){
             return $this->$fc($tagname, $attrs, $v_slot, $has_childs);
         }
-        if ($has_childs)
-             $v_slot = 1;
+        if ($has_childs && !in_array($tagname, explode('|', "teleport")))
+            $v_slot = 1;
         self::AddLib($c, $tag= VueSFCUtility::GetBuildInName($tagname));        
         return $tag;
     }
