@@ -7,9 +7,13 @@ namespace igk\js\Vue3\System\Converter;
 use IGK\Controllers\BaseController;
 use IGK\Helper\IO;
 use igk\js\Vue3\Compiler\VueSFCCompiler;
+use igk\js\Vue3\VueConstants;
+use IGK\System\Console\Logger;
+use IGK\System\Html\Css\CssComment;
 use IGK\System\Html\Css\CssParser;
 use IGK\System\Html\Css\CssStyle;
 use IGK\System\Html\HtmlContext;
+use IGK\System\Html\HtmlNodeBuilder;
 use IGK\System\Html\HtmlReader;
 use IGK\System\IO\File\PHPScriptBuilder;
 use IGK\System\IO\Path;
@@ -52,8 +56,17 @@ class VueInlineProjectConverter{
         $styles =  $data->getElementsByTagName("style");
         $base = igk_io_basenamewithoutext($file);
         $dirname = dirname($path);
-        if ($template)
-            $this->store(Path::Combine($dirname, $base.'.phtml'), $template->getInnerHtml());
+        if ($template){
+            $file = Path::Combine($dirname, $base.'.phtml');
+            $builder = new PHPScriptBuilder;
+            $sb = new StringBuilder;
+            $sb->appendLine(HtmlNodeBuilder::Generate($template));
+            $builder->type('function')->defs($sb);
+            // $this->store(Path::Combine($dirname, $base.'.phtml'), $template->getInnerHtml());
+            $this->store($file, $builder->render());
+            // Logger::info(__FILE__.":".__LINE__ .' '. $file);
+            // exit;
+        }
         if ($scripts){
             $sb = new StringBuilder;
             $inline = new StringBuilder;
@@ -83,7 +96,9 @@ class VueInlineProjectConverter{
             } else {
                 return;
             }
-            $this->store(Path::Combine($dirname, $base.'.vue3-setup.js'),$sb.'');
+            if (!empty($sb)){
+                $this->store(Path::Combine($dirname, $base.VueConstants::VUE_JS_SETUP_EXT),$sb.'');
+            }
         }
         if ($styles){
             $sb = new StringBuilder;
@@ -109,6 +124,9 @@ class VueInlineProjectConverter{
                 if (is_array($v)){
                     $v = igk_array_key_map_implode($v);
                 }
+                if ($v instanceof CssComment)
+                    continue;
+                    
                 $sb->appendLine('$def[\''.$k.'\'] = "'.$v.'";');
             }
 

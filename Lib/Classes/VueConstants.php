@@ -41,5 +41,6 @@ class VueConstants{
     const VUE_BUILDIN_COMPONENT = 'KeepAlive|Slot|Text|Teleport|Transition|TransitionGroup|Component|Template';
     const VUE_BUILDIN_SPECIAL_COMPONENT = 'Slot|Component|Template';
 
+    const VUE_JS_SETUP_EXT = '.vue3-setup.js';
 
 }

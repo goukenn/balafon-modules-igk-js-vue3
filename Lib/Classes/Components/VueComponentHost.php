@@ -14,21 +14,14 @@ use IGK\System\Html\Dom\Traits\HtmlNodeContainerTrait;
 */
 class VueComponentHost extends VueComponent{
     use HtmlNodeContainerTrait;
-    var $host;  
+ 
     var $tagname ="vue-component-host";
-    public function getCanRenderTag()
-    {
-        return false;
-    }
-    function getRenderedChilds($options = null)
-    {
-        return [$this->host];
-    }
 
     public function __construct(HtmlItemBase $host){
         ($host instanceof static) && igk_die("not allowed.");
         parent::__construct();
         $this->host = $host;
+        $this->host->m_parent = $this;
     }
     public function _add($n, $force = false):bool{
         if ($g = $this->host->_add($n, $force)){

@@ -17,15 +17,15 @@ use IGKException;
 * @package igk\js\Vue3\System\Console\Commands
 */
 class ConvertVueProjectToInlineBalafonCommand extends VueCommandBase{
-    var $command = '--vue3:convert';
-    var $cat = "vue3";
+    var $command = '--vue3:convert'; 
     var $options=[
         "--output:[dir]"=>"ouput directory",
         "--name:[name]"=>"project dir name"
     ];
+    var $desc = "Convert vue project to inline runtime balafon-app";
     public function showUsage(){
         parent::showUsage();
-        Logger::print(sprintf("s% path [controller] [options]"));
+        Logger::print(sprintf("%s path [controller] [options]", $this->command));
     }
     public function exec($command, string $path=null, $controller=null){
         $controller && ($controller = self::GetController($controller) ?? igk_die("project controller not found"));
@@ -62,16 +62,18 @@ class ConvertVueProjectToInlineBalafonCommand extends VueCommandBase{
      * @throws IGKException 
      */
     public function Convert(string $path, ?BaseController $controller, $outdir):bool{
-        Logger::print("converting....");
         $files = IO::GetFiles($path."/src", "/\.(vue|js|css|scss|png|jp(e)g|json|md)$/",true);
-
+        
         $converter = new VueInlineProjectConverter;
         $converter->outdir = $outdir;
         $converter->inputdir = $path;
+        Logger::print("converting....");
         foreach($files as $file ){
+            // $file = '/Volumes/Data/Downloads/cork-vue-v2.0.1/vue3/src/layouts/app-layout.vue';
+            igk_is_debug() && Logger::info($file);
             $converter->Convert($file, $controller);
-        }
-        
+           // break;
+        } 
         return true;
     }
 }

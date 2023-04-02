@@ -21,9 +21,12 @@ class ViewScriptModuleRenderer{
     public function render($options = null){ 
         $sb = new StringBuilder();
         $sb->appendLine("import { createApp } from 'vue';");
-        $sb->appendLine("createApp(");
-        $sb->appendLine(JSExpression::Stringify($this->data, (object)["objectNotation"=>1]));
-        $sb->appendLine(").mount('#".$this->id."');"); 
+        $sb->appendLine( sprintf( "createApp(%s).mount('#%s');", 
+            JSExpression::Stringify($this->data, (object)["objectNotation"=>1]) ),
+            $this->id
+        );
+        // $sb->appendLine(JSExpression::Stringify($this->data, (object)["objectNotation"=>1]));
+        // $sb->appendLine(").mount('#".$this->id."');"); 
         return $sb;
     }
 }

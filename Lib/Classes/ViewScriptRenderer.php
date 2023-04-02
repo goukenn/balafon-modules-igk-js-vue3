@@ -71,7 +71,9 @@ class ViewScriptRenderer
     {
         $v_header_sb = new StringBuilder;
         $sb = new StringBuilder();
+        $v_header_sb->lf ='';
         // $sb->lf = !$options || $options->Indent ? "\n" : "";
+        $sb->lf = '';
         $js_options = (object)["objectNotation" => 1];
         $use = "";
         $_vdata = $this->_libraries_import($this->m_libraries ?? []);
@@ -120,8 +122,8 @@ class ViewScriptRenderer
         if ($app_name) {
             $sb->append("const {$this->m_name} = ");
         }
-        $sb->appendLine("createApp(");
-        $sb->appendLine(JSExpression::Stringify($this->m_data, $js_options));
+        $sb->append("createApp(");
+        $sb->append(JSExpression::Stringify($this->m_data, $js_options));
         $components = $this->m_components ?? [];
         foreach ($components as $k => $c) {
             $sc = JSExpression::Stringify($c, $js_options);
@@ -147,19 +149,16 @@ class ViewScriptRenderer
         if ($app_name){
             $sb->appendLine(");");
             // + | --------------------------------------------------------------------
-            // + | do something the the app 
+            // + | do something
             // + |
-            $sb->appendLine($app_name.".component('Foo-Data', Foo); igk.vue_app = $app_name;");
-
+            $sb->append("igk.vue_app = $app_name;"); 
             $sb->append($app_name);
         } else{
             $sb->append(")");            
         }
-
-        // + | --------------------------------------------------------------------
+        // + | ------------------------------------------------------------------------
         // + | mount application 
-        // + |
-        
+        // + | 
         $sb->appendLine(".mount('#" . $this->m_id . "');");
         return $v_header_sb.$sb.'';
     }
