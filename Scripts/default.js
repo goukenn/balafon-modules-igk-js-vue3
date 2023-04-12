@@ -304,7 +304,7 @@
             for (let i in _app_shared_uses)
                 app.use(_app_shared_uses[i]);  
         }
-        app.mount(this.o);
+        app.mount(t);
     };
 
     igk.winui.initClassControl("igk-vue-clone",function(){

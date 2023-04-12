@@ -155,3 +155,15 @@ if (!function_exists('igk_html_node_vue_clone')) {
         return $n;
     }
 }
+if (!function_exists('igk_html_node_vue_item')) {
+    /**
+     * helper to clone the vue
+     * @param mixed $to 
+     * @return HtmlItemBase<mixed, mixed> 
+     * @throws IGKException 
+     */
+    function igk_html_node_vue_item($to = null){
+        $n =  new VueComponentNode('div');
+        return $n;
+    }
+}
