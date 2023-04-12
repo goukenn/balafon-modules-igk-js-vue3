@@ -15,6 +15,10 @@ use function igk_resources_gets as __;
  */
 class VueApplicationNode extends VueComponent{
     protected $tagname = "div";
+    /**
+     * application script rendererd 
+     * @var mixed
+     */
     protected $appScript;
     /**
      * no script node
@@ -25,6 +29,11 @@ class VueApplicationNode extends VueComponent{
     private $m_isModuleApp;
     private $m_appname;
     private $m_uses;
+    /**
+     * shared used 
+     * @var ?array 
+     */
+    private $m_share_uses; 
     private $m_components;
     private $m_def;
     /**
@@ -167,6 +176,9 @@ class VueApplicationNode extends VueComponent{
     public function getUses(){
         return $this->m_uses;
     }
+    public function getSharedUses(){
+        return $this->m_share_uses;
+    }
     /**
      * uses vue libraries
      * @param mixed|null|string|array $lib 
@@ -207,9 +219,10 @@ class VueApplicationNode extends VueComponent{
     }
 
     /** 
-    * bind library to be shared with all components
+    * bind library to be shared with all apps
     */
-    public function sharedUse(array $libs){
+    public function sharedUse(?array $libs){
+        $this->m_share_uses = $libs;
         return $this;
     }
 

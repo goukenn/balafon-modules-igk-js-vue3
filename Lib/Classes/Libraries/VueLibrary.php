@@ -8,13 +8,12 @@ use Closure;
 class VueLibrary extends VueLibraryBase{
     const DefineComponent = 'defineComponent';
     const DefineAsyncComponent = 'defineAsyncComponent';
-    protected $m_module;
-    protected $m_name;
+    protected $m_module; 
     var $listener;
 
     public function __construct(string $name, ?string $module='Vue')
     {
-        $this->m_name = $name;
+        parent::__construct($name);
         $this->m_module = $module;
     }
 

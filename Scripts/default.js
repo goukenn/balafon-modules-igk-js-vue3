@@ -4,6 +4,8 @@
 "use strict";
 (function () {
     const _sfc_register = {};
+    // store shared data between different app 
+    const _app_shared_uses = {};
     /**
      * load .vue data
      * @param {t} t text data to load
@@ -290,6 +292,35 @@
         },
         initComponent() {
             // TODO Init global component 
+        },
+        shared(data){
+            for(var i in data){
+                _app_shared_uses[i] = data[i];
+            }
         }
+    });
+    function initAppAndMount(app, t){
+        if (_app_shared_uses){
+            for (let i in _app_shared_uses)
+                app.use(_app_shared_uses[i]);  
+        }
+        app.mount(this.o);
+    };
+
+    igk.winui.initClassControl("igk-vue-clone",function(){
+        const { createApp } = Vue; 
+        const data = this.getAttribute('igk-data');
+        let q = $igk(data).first();
+        if (q){ 
+            let c = q.getAttribute('igk-clone-data') || q.getHtml(); 
+            this.setHtml(c);                        
+            initAppAndMount(createApp(), this.o);
+        }
+    });
+
+    // init root view clonable data before main - application - start
+    $igk('.igk-vue-clonable').each_all(function(){
+        this.o.setAttribute('igk-clone-data', this.getHtml());
+        this.rmClass('igk-vue-clonable');
     });
 })();

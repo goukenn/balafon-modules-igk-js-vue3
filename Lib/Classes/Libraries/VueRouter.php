@@ -179,7 +179,7 @@ class VueRouter extends VueLibraryBase{
         $sb = new StringBuilder();
         $t = $this->getHistoryMethod();
         $v_extra = '';
-        $_id = $this->id ?? "route";
+        $_id = $this->getVarName();
         $sb->appendLine("/** vue-router **/");
         $sb->appendLine("const { createRouter, {$t}{$v_extra} } = VueRouter;");
         $ref_cp = 0;
@@ -280,9 +280,8 @@ class VueRouter extends VueLibraryBase{
             $tdata["props"] = (bool)igk_bool_val($data["useProps"]);
        }
     }
-    public function useLibrary($option=null):array{
-        $_id = $this->id ?? "route";
-        return [$_id, null];
+    public function useLibrary($option=null):array{        
+        return [$this->getVarName(), null];
     }
     /**
      * create a router definition interface
@@ -308,5 +307,9 @@ class VueRouter extends VueLibraryBase{
     static function evalJSString(string $s){
         $s = preg_replace("#</script\s*>#i", "<\\/script>", $s);
         return $s;
+    }
+    public function getVarName()
+    {
+        return $this->id ?? 'router';
     }
 }

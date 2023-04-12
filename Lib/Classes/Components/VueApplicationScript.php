@@ -52,6 +52,7 @@ class VueApplicationScript extends VueScript
             $this->m_app->getComponents()
         );
         $sc->def = $this->m_app->getDefs();
+        $sc->sharedUses = $this->m_app->getSharedUses();
         $rd = [];        
         $rd[] = $sc;    
         return $rd;

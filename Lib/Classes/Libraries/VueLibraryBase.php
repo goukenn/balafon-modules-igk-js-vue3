@@ -18,6 +18,13 @@ abstract class VueLibraryBase implements IRefLibrary{
     public function getName(){
         return $this->m_name;
     }
+    /**
+     * get js variable name
+     * @return string 
+     */
+    public function getVarName(){
+        return $this->m_name;
+    }
     protected function __construct(?string $name=null)
     {        
         $this->m_name = $name;

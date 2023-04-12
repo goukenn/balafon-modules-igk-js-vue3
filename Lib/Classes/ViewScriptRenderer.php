@@ -27,6 +27,12 @@ class ViewScriptRenderer
      * @var mixed
      */
     var $def;
+
+    /**
+     * shared used 
+     * @var ?array
+     */
+    var $sharedUses;
     /**
      * construct script renderer
      * @param mixed $id 
@@ -85,7 +91,7 @@ class ViewScriptRenderer
         unset($_vdata->vueLib);
         $chain = new StringBuilder;
         $v_header_sb->appendLine("\nconst { createApp" . $use . " } = Vue;");
-        $uses = [];
+        $v_uses = [];
         $liboption = [];
         if ($options instanceof HtmlRendererOptions){
             $options->setRef(VueConstants::LIB_OPTIONS, $liboption);
@@ -101,9 +107,9 @@ class ViewScriptRenderer
             if ($g = $v->useLibrary($options)){
                 if (is_array($g) && count($g)>=2){
                     list($key, $op) = $g;
-                    $uses[$key] = $op;
+                    $v_uses[$key] = $op;
                 }else { 
-                    $uses[$g] = null;
+                    $v_uses[$g] = null;
                 }
             } 
         } 
@@ -138,12 +144,28 @@ class ViewScriptRenderer
                 Logger::info('view renderer string ify return an empty value');
             }
         }
-        foreach ($uses as $k => $c) {
+        $v_sharedUsed = [];
+        foreach ($v_uses as $k => $c) {
             $sc = JSExpression::Stringify($c, $js_options);
             if (!empty($sc)) {
                 $sc = ", " . $sc;
             }
             $sb->append(").use({$k}{$sc}");
+            $v_sharedUsed[] = $k;
+        }
+        if ($this->sharedUses){
+            $inf = '';
+            $ch = '';
+            foreach($this->sharedUses as $c){
+                $k = $c->getVarName();
+                if (in_array($k, $v_sharedUsed)){
+                    $inf .= $ch.''.$k;
+                    $ch = ',';
+                }
+            }
+            if (!empty($inf)){
+            $v_header_sb->append(sprintf('igk.js.vue3.shared({%s});', $inf));
+            }
         }
 
         if ($app_name){

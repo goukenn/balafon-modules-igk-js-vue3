@@ -20,6 +20,13 @@ class VueLibraryVar extends VueLibrary{
     public function setDeclarationListener(?callable $listener){
         $this->declarationListener = $listener;
     }
+    /**
+     * get js variable name
+     * @return string 
+     */
+    public function getVarName(){
+        return $this->varName;
+    }
     public function __construct(string $var_name, string $name, ?string $module="Vue")
     {
         $this->varName = $var_name;

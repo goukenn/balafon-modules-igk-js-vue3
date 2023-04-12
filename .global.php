@@ -14,6 +14,7 @@ use igk\js\Vue3\Components\VueComponent;
 use igk\js\Vue3\Components\VueComponentNode;
 use igk\js\Vue3\Components\VueRouterLink;
 use igk\js\Vue3\Components\VueTemplateScriptNode;
+use IGK\System\Html\Dom\HtmlItemBase;
 use IGK\System\Html\Dom\HtmlNoTagNode;
 
 /**
@@ -141,9 +142,15 @@ if (!function_exists('igk_html_node_vue_router_link')) {
 
 
 if (!function_exists('igk_html_node_vue_clone')) {
-    function igk_html_node_vue_clone($to = null)
-    {
+    /**
+     * helper to clone the vue
+     * @param mixed $to 
+     * @return HtmlItemBase<mixed, mixed> 
+     * @throws IGKException 
+     */
+    function igk_html_node_vue_clone($to = null){
         $n =  igk_create_node('div');
+        $n['class'] = 'igk-vue-clone';
         $n["igk-data"] = $to;
         return $n;
     }

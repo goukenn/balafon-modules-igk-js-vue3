@@ -14,9 +14,25 @@ use igk\js\Vue3\Libraries\VueLibraryVar;
 use IGK\Resources\R;
 use IGK\System\IO\StringBuilder;
 use igk\js\Vue3_i18n\Helpers\Locale as I18nLocaleHelper;
+use IGKException;
+use IGK\System\Exceptions\ArgumentTypeNotValidException;
+use ReflectionException;
+use IGK\System\Exceptions\EnvironmentArrayException;
 
 class Vuei18n
 {
+    /**
+     * init document helper 
+     * @param mixed $doc 
+     * @param null|BaseController $ctrl 
+     * @param bool $useglobal_resource 
+     * @param string $varName 
+     * @return VueLibraryVar 
+     * @throws IGKException 
+     * @throws ArgumentTypeNotValidException 
+     * @throws ReflectionException 
+     * @throws EnvironmentArrayException 
+     */
     public static function InitDoc($doc, ?BaseController $ctrl, bool $useglobal_resource = false , string $varName="i18n")
     {
         $mod = igk_require_module(\igk\js\Vue3_i18n::class);
@@ -28,6 +44,18 @@ class Vuei18n
         return $i18n;
     }
 
+    /**
+     * load render 18nlocale 
+     * @param string $n 
+     * @param string $method 
+     * @param BaseController $ctrl 
+     * @param mixed $useglobal_resource 
+     * @param mixed $options 
+     * @return string 
+     * @throws IGKException 
+     * @throws ArgumentTypeNotValidException 
+     * @throws ReflectionException 
+     */
     public static function VueRenderI18nLocaleSetting(string $n, string $method, BaseController $ctrl, $useglobal_resource, $options ){
         /**
         * @var IJSExpressionOptions $obj
