@@ -205,6 +205,16 @@ class VueApplicationNode extends VueComponent{
         }
         return $this;
     }
+
+    /** 
+    * bind library to be shared with all components
+    */
+    public function sharedUse(array $libs){
+        return $this;
+    }
+
+    
+
     /**
      * register components
      * @param string $name 

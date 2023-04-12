@@ -14,6 +14,8 @@ use igk\js\common\JSExpressionObjectResult;
 use igk\js\Vue3\Controllers\MacrosExtensions;
 use igk\js\Vue3\JS\VueLazyImportExpression;
 use igk\js\Vue3\JS\VueLazyLoadExpression;
+use igk\js\Vue3\Libraries\VueFileLibrary;
+use igk\js\Vue3\Libraries\VueLibrary;
 use igk\js\Vue3\Libraries\VueLibraryBase;
 use igk\js\Vue3\Libraries\VueRouter;
 use IGK\System\Exceptions\ArgumentTypeNotValidException;
@@ -32,6 +34,16 @@ use ReflectionException;
  */
 abstract class VueHelper
 {
+    /**
+     * resolve component directory 
+     * @return array 
+     */
+    public static function GetComponents(){
+        return [];
+    }
+
+   
+        
     public static function InitRoute($doc, BaseController $ctrl=null, ?string $name=null){
         return VueRouter::InitDoc($doc, $ctrl, $name);
     }
@@ -41,7 +53,7 @@ abstract class VueHelper
      * @return null|VueLibraryBase 
      */
     public static function UseScriptLibrary(string $file):?VueLibraryBase{
-        return null;
+        return new VueFileLibrary($file); 
     }
     public static function IncRouteOptions(string $path, $args=[], $routeOptions =[],  BaseController $ctrl=null){
         $defs = [];
@@ -73,9 +85,6 @@ abstract class VueHelper
                 return VueScript::Include($f, $c? trim($c) : 'js');   
             }
         }
-
-
-
     }
     public static function LayoutImport(string $file, BaseController $ctrl = null)
     {

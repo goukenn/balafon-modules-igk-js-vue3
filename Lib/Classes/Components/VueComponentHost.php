@@ -22,13 +22,16 @@ class VueComponentHost extends VueComponent{
         parent::__construct();
         $this->host = $host;
         $this->host->m_parent = $this;
+        $this->m_attributes = $this->host->m_attributes;
+        
     }
     public function _add($n, $force = false):bool{
         if ($g = $this->host->_add($n, $force)){
-            if ($n instanceof VueComponentHost){
-                //$n->m_parent = $this->getParentNode();
-            }
+            // if ($n instanceof VueComponentHost){
+            //     //$n->m_parent = $this->getParentNode();
+            // }
         }
         return $g;
     } 
+ 
 }

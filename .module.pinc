@@ -33,11 +33,12 @@ $reg("initDoc", function ($doc) {
             ->activate("defer")
             ->setAttribute("crossorigin" , "anonymous");
     }
-    $src = $doc->addTempScript($this->getScriptsDir()."/default.js")->activate('defer');     
+    $doc->addTempScript($this->getScriptsDir()."/default.js")->activate('defer');     
 });
 
+// + | -------------------------------------------------------------------------
 // + | register macros  - that enable use of function to external node behaviour
-
+// + |
 HtmlItemBase::RegisterMacros(VueConstants::WEB_CONTEXT, \igk\js\Vue3\System\Html\VueMacrosExtensions::class);
 
 // + module definition

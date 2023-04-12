@@ -31,7 +31,8 @@ class VueLoadingContext extends HtmlLoadingContext{
                 if ($tagname && (preg_match("/^igk(:|-)/", $tagname) || in_array($tagname, ["igk-img"]))){
                     // igk_wln("try to create an inner element ".$tagname);
                     // add v-pre directive to disable loading ... 
-                    $args['node']->vPre();
+                    // $args['node']->vPre();
+                    $args['node']->activate('v-pre'); // vPre();
                 }            
             }
         };

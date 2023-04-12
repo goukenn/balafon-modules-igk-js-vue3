@@ -15,6 +15,7 @@ use igk\js\Vue3\JS\VueLazyImportExpression;
 use igk\js\Vue3\JS\VueLazyLoadExpression;
 use igk\js\Vue3\VueConstants;
 use IGK\System\Exceptions\ArgumentTypeNotValidException;
+use IGK\System\Html\Dom\HtmlItemBase;
 use IGK\System\Html\Dom\HtmlNode;
 use IGK\System\Html\HtmlRenderer;
 use IGK\System\IO\StringBuilder;
@@ -103,12 +104,18 @@ class VueRouter extends VueLibraryBase{
     /**
      * 
      * @param string $path 
-     * @param mixed|array|HtmlNode|VueLazyImportExpression|VueRouteOptions $data component to use \
+     * @param mixed|string|array|HtmlNode|VueLazyImportExpression|VueRouteOptions $data component to use \
      * if array : array['template', 'useProps']
      * @return static 
      * @throws IGKException 
      */
     public function addRoute(string $path, $data){         
+        if (is_string($data)){
+            $data = ['template'=>$data];
+        }
+        else if ($data instanceof HtmlItemBase){
+            $data = ['template'=>$data];
+        }
         $this->m_routes[$path] =  $data; 
         return $this;
     }

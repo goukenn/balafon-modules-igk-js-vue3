@@ -24,24 +24,6 @@ class Vuei18n
         $i18n = new VueLibraryVar($varName, "createI18n", "VueI18n");
         $i18n->setDeclarationListener(function ($n, $method, $options = null) use ($ctrl, $useglobal_resource): ?string {
             return self::VueRenderI18nLocaleSetting($n, $method, $ctrl, $useglobal_resource, $options);    
-            //         /**
-            //     * @var IJSExpressionOptions $obj
-            //     */
-            // $obj = igk_createobj();  
-            // $obj->detectMethod = false;
-            // $obj->useObjectNotation = true;
-            // $default_lang = igk_getv($options, "default_lang", igk_configs()->default_lang);
-            // $msg = JSExpression::Litteral(JSExpression::Stringify((object)I18nLocaleHelper::LoadLocale($ctrl, $useglobal_resource, $default_lang), $obj));
-
-            // $sb = new StringBuilder;
-            // $sb->appendLine(sprintf('let %s = %s(', $n, $method));
-            // $sb->appendLine(JSExpression::Stringify((object)[
-            //     "locale" => R::GetCurrentLang(),
-            //     "fallbackLocale" => igk_configs()->default_lang, 
-            //     "messages" => $msg,
-            // ], (object)['objectNotation' => true]));
-            // $sb->appendLine(");");
-            // return $sb . '';
         });
         return $i18n;
     }
