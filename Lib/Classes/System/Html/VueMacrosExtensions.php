@@ -16,6 +16,7 @@ use igk\js\Vue3\Components\VueTemplate;
 use igk\js\Vue3\Components\VueTransition;
 use igk\js\Vue3\Components\VueTransitionGroup;
 use igk\js\Vue3\System\WinUI\Menus\RouterMenuBuilder;
+use igk\js\Vue3\VueConstants;
 use igk\js\VueJS\Html\RouterView;
 use IGK\System\Exceptions\EnvironmentArrayException;
 use IGK\System\Html\Dom\HtmlNode;
@@ -351,15 +352,15 @@ abstract class VueMacrosExtensions{
         return $n;
     }
     /**
-     * help build vue router link
+     * help build vue router link as menu
      * @param HtmlNode $node 
      * @param array $menus 
      * @return HtmlNode 
      * @throws IGKException 
      */
-    public static function vMenus(HtmlNode $node, array $menus = []){
+    public static function vMenus(HtmlNode $node, array $menus = [], string $default_class= VueConstants::DEFAULT_MENU_CLASS){
         $ul = $node->ul();
-        $ul["class"] = "igk-menu igk-vue-menu";
+        $ul["class"] = $default_class;
         igk_html_build_menu($ul, $menus, new RouterMenuBuilder);
         return $ul;
     }
@@ -375,8 +376,16 @@ abstract class VueMacrosExtensions{
         $n = new VueTeleport();
         $node->add($n);
         $to && $n->setTo($to);
-
         return $n;
+    }
+    /**
+     * activate a v-memo on an element 
+     * @param HtmlNode $node 
+     * @return HtmlNode 
+     * @throws IGKException 
+     */
+    public static function vMemo(HtmlNode $node){
+        return $node->activate('v-memo'); 
     }
     
     public static function __callStatic($name, $arg){

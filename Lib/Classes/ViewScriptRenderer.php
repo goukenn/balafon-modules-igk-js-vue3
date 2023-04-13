@@ -6,8 +6,11 @@ igk_require_module(\igk\js\common::class);
 
 use igk\js\common\JSExpression;
 use IGK\System\Console\Logger;
+use IGK\System\Exceptions\ArgumentTypeNotValidException;
 use IGK\System\Html\HtmlRendererOptions;
 use IGK\System\IO\StringBuilder;
+use IGKException;
+use ReflectionException;
 use stdClass;
 
 /**
@@ -62,22 +65,30 @@ class ViewScriptRenderer
         foreach ($data as $k => $v) {
             if (is_numeric($k) || (strtolower($k) == "vue")) {
                 // global vue 
-                if (is_array($v)){
+                if (is_array($v)) {
                     array_push($std->vueLib, ...$v);
-                }else{
+                } else {
                     $std->vueLib[] = $v;
                 }
-            } else { 
+            } else {
                 $std->$k = $v;
             }
         }
         return $std;
     }
-    public function render($options = null):?string
+    /**
+     * render script content
+     * @param mixed $options 
+     * @return null|string 
+     * @throws IGKException 
+     * @throws ArgumentTypeNotValidException 
+     * @throws ReflectionException 
+     */
+    public function render($options = null): ?string
     {
         $v_header_sb = new StringBuilder;
         $sb = new StringBuilder();
-        $v_header_sb->lf ='';
+        $v_header_sb->lf = '';
         // $sb->lf = !$options || $options->Indent ? "\n" : "";
         $sb->lf = '';
         $js_options = (object)["objectNotation" => 1];
@@ -85,7 +96,7 @@ class ViewScriptRenderer
         $_vdata = $this->_libraries_import($this->m_libraries ?? []);
         if ($tuses = $_vdata->vueLib) {
             if ($s = implode(", ", array_unique($tuses)))
-                $use = ", " . $s ;
+                $use = ", " . $s;
         }
 
         unset($_vdata->vueLib);
@@ -93,37 +104,39 @@ class ViewScriptRenderer
         $v_header_sb->appendLine("\nconst { createApp" . $use . " } = Vue;");
         $v_uses = [];
         $liboption = [];
-        if ($options instanceof HtmlRendererOptions){
-            $options->setRef(VueConstants::LIB_OPTIONS, $liboption);
-        } else {
-            $options->{VueConstants::LIB_OPTIONS} = & $liboption;
+        if ($options) {
+            if ($options instanceof HtmlRendererOptions) {
+                $options->setRef(VueConstants::LIB_OPTIONS, $liboption);
+            } else {
+                $options->{VueConstants::LIB_OPTIONS} = &$liboption;
+            }
         }
 
         // + | import library rendering
-        foreach ($_vdata as $k => $v) { 
-            if (!is_null($s = $v->render($options))){
+        foreach ($_vdata as $k => $v) {
+            if (!is_null($s = $v->render($options))) {
                 $chain->appendLine(rtrim($s));
             }
-            if ($g = $v->useLibrary($options)){
-                if (is_array($g) && count($g)>=2){
+            if ($g = $v->useLibrary($options)) {
+                if (is_array($g) && count($g) >= 2) {
                     list($key, $op) = $g;
                     $v_uses[$key] = $op;
-                }else { 
+                } else {
                     $v_uses[$g] = null;
                 }
-            } 
-        } 
-        if ($liboption){
-            foreach($liboption as $k=>$v){
-                $v_header_sb->appendLine('const { '.implode(", ", $v->to_array()).' } = '.$k .';');
+            }
+        }
+        if ($liboption) {
+            foreach ($liboption as $k => $v) {
+                $v_header_sb->appendLine('const { ' . implode(", ", $v->to_array()) . ' } = ' . $k . ';');
             }
         }
 
 
         if (!is_null($this->def)) {
-            $v_header_sb->appendLine("\n".trim($this->def)."\n");
+            $v_header_sb->appendLine("\n" . trim($this->def) . "\n");
         }
-        $v_header_sb->appendLine($chain."");
+        $v_header_sb->appendLine($chain . "");
         $app_name = $this->m_name;
         if ($app_name) {
             $sb->append("const {$this->m_name} = ");
@@ -133,14 +146,13 @@ class ViewScriptRenderer
         $components = $this->m_components ?? [];
         foreach ($components as $k => $c) {
             $sc = JSExpression::Stringify($c, $js_options);
-            if (!empty($sc)){
+            if (!empty($sc)) {
                 $sb->append(").component(");
-                if (is_numeric($k)){ 
+                if (is_numeric($k)) {
                     $k = igk_getv($c, 'id') ?? igk_die("component identifier not valid value");
                 }
                 $sb->appendLine("'{$k}', {$sc}");
-                
-            } else{
+            } else {
                 Logger::info('view renderer string ify return an empty value');
             }
         }
@@ -153,35 +165,35 @@ class ViewScriptRenderer
             $sb->append(").use({$k}{$sc}");
             $v_sharedUsed[] = $k;
         }
-        if ($this->sharedUses){
+        if ($this->sharedUses) {
             $inf = '';
             $ch = '';
-            foreach($this->sharedUses as $c){
+            foreach ($this->sharedUses as $c) {
                 $k = $c->getVarName();
-                if (in_array($k, $v_sharedUsed)){
-                    $inf .= $ch.''.$k;
+                if (in_array($k, $v_sharedUsed)) {
+                    $inf .= $ch . '' . $k;
                     $ch = ',';
                 }
             }
-            if (!empty($inf)){
-            $v_header_sb->append(sprintf('igk.js.vue3.shared({%s});', $inf));
+            if (!empty($inf)) {
+                $v_header_sb->append(sprintf('igk.js.vue3.shared({%s});', $inf));
             }
         }
 
-        if ($app_name){
+        if ($app_name) {
             $sb->appendLine(");");
             // + | --------------------------------------------------------------------
             // + | do something
             // + |
-            $sb->append("igk.vue_app = $app_name;"); 
+            $sb->append("igk.vue_app = $app_name;");
             $sb->append($app_name);
-        } else{
-            $sb->append(")");            
+        } else {
+            $sb->append(")");
         }
         // + | ------------------------------------------------------------------------
         // + | mount application 
         // + | 
         $sb->appendLine(".mount('#" . $this->m_id . "');");
-        return $v_header_sb.$sb.'';
+        return $v_header_sb . $sb . '';
     }
 }

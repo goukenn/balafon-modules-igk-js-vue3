@@ -12,26 +12,37 @@ use igk\js\Vue3\ViewScriptRenderer;
  * */
 class VueApplicationScript extends VueScript
 {
+    /**
+     * 
+     * @var callable
+     */
     private $m_data;
+    /**
+     * 
+     * @var VueApplicationNode
+     */
     private $m_app;
 
     public function __construct(VueApplicationNode $app, callable $data)
     {
-        parent::__construct();
         $this->m_data = $data;
         $this->m_app = $app;
+        parent::__construct();
+    }
+    protected function initialize()
+    {
+        parent::initialize();
+        $this['type'] = 'module';
+        $this['async'] = true;
+
     }
     protected function __AcceptRender($options = null):bool
     {
         if ($this->m_app->getNoRenderedScript()){
             return false;
-        }
-        if ($g = parent::__AcceptRender($options)) {
-            if ($this->m_app->isModuleApp()) {
-                $this->setAttribute("type", "module");
-            }
-        }
-        return $g;
+        }        
+        $this['async'] = $this->m_app->getAsyncScript() ? true : null; 
+        return parent::__AcceptRender($options);
     }
     public function getRenderedChilds($options = null)
     {
@@ -41,7 +52,6 @@ class VueApplicationScript extends VueScript
         $v_appName = $this->m_app->getApplicationName();
 
         if ($this->m_app->isModuleApp()) {
-            $this["type"] = "module";
             return [new ViewScriptModuleRenderer($this->m_app["id"], $data, $v_appName)];
         }
         $sc = new ViewScriptRenderer(
@@ -52,9 +62,19 @@ class VueApplicationScript extends VueScript
             $this->m_app->getComponents()
         );
         $sc->def = $this->m_app->getDefs();
-        $sc->sharedUses = $this->m_app->getSharedUses();
-        $rd = [];        
-        $rd[] = $sc;    
-        return $rd;
+        $sc->sharedUses = $this->m_app->getSharedUses(); 
+        if ($this['async']){
+            $sc = new AsyncRender($sc);  
+        }
+        return [$sc];
+    }
+}
+class AsyncRender{
+    var $sc;
+    public function __construct($sc){
+        $this->sc = $sc;
+    }
+    public function render($options=null){
+        return sprintf("igk.ready(async function(){%s});", $this->sc->render($options).'');
     }
 }

@@ -43,4 +43,6 @@ class VueConstants{
 
     const VUE_JS_SETUP_EXT = '.vue3-setup.js';
 
+    const DEFAULT_MENU_CLASS  = 'igk-menu igk-vue-menu';
+
 }

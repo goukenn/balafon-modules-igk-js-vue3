@@ -29,6 +29,7 @@ class VueApplicationNode extends VueComponent{
     private $m_isModuleApp;
     private $m_appname;
     private $m_uses;
+    private $m_async_script;
     /**
      * shared used 
      * @var ?array 
@@ -46,8 +47,19 @@ class VueApplicationNode extends VueComponent{
         $this->m_noScriptRenderer = $noscript;
         return $this;
     }
+    /**
+     * get no rendering script 
+     * @return bool 
+     */
     public function getNoRenderedScript(){
         return $this->m_noScriptRenderer;
+    }
+    /**
+     * resolve async script
+     * @return mixed 
+     */
+    public function getAsyncScript(){
+        return $this->m_async_script;
     }
     /**
      * set custom header script definition

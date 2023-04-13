@@ -14,6 +14,8 @@ use igk\js\Vue3\Components\VueComponent;
 use igk\js\Vue3\Components\VueComponentNode;
 use igk\js\Vue3\Components\VueRouterLink;
 use igk\js\Vue3\Components\VueTemplateScriptNode;
+use igk\js\Vue3\System\WinUI\Menus\RouterMenuBuilder;
+use igk\js\Vue3\VueConstants;
 use IGK\System\Html\Dom\HtmlItemBase;
 use IGK\System\Html\Dom\HtmlNoTagNode;
 
@@ -94,11 +96,7 @@ function igk_html_node_vue_app(string $id, $data = null)
     }
     return $n;
 }
-function igk_html_node_vue_item()
-{
-    $c = new VueComponentNode('');
-    return $c;
-}
+ 
 
 /**
  * create a vue template node
@@ -162,8 +160,22 @@ if (!function_exists('igk_html_node_vue_item')) {
      * @return HtmlItemBase<mixed, mixed> 
      * @throws IGKException 
      */
-    function igk_html_node_vue_item($to = null){
-        $n =  new VueComponentNode('div');
+    function igk_html_node_vue_item($tag='div'){
+        $n =  new VueComponent($tag ?? 'div');
         return $n;
+    }
+}
+if (!function_exists('igk_html_node_vue_menus')) {
+    /**
+     * helper to clone the vue
+     * @param mixed $to 
+     * @return HtmlItemBase<mixed, mixed> 
+     * @throws IGKException 
+     */
+    function igk_html_node_vue_menus(array $menus = null, $default_class= VueConstants::DEFAULT_MENU_CLASS){
+        $ul = new VueComponent("ul");
+        $ul["class"] = $default_class;
+        $menus && igk_html_build_menu($ul, $menus, new RouterMenuBuilder);
+        return $ul;
     }
 }

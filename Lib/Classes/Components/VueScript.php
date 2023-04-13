@@ -13,13 +13,8 @@ class VueScript extends VueComponent{
     public function setSetup(bool $activeSetup){
         $activeSetup ? $this->activate('setup') : $this->deactivate('setup');
     }
-    public function __construct()
-    {
+    public function __construct(){
         parent::__construct();        
     }
-    protected function initialize()
-    {
-        parent::initialize();
-        $this["type"] = "module"; 
-    }
+  
 }
