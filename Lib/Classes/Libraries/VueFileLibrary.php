@@ -5,6 +5,10 @@ namespace igk\js\Vue3\Libraries;
 
 use Closure;
 
+/**
+ * use to inject file content before app definition.
+ * @package igk\js\Vue3\Libraries
+ */
 class VueFileLibrary extends VueLibraryBase{
     private $m_file;
 

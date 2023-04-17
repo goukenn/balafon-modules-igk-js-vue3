@@ -46,7 +46,7 @@
                 dataUri = igk.system.modules.esm`${script.text()}`;
             }
             prom.push(
-                import(dataUri).then((d) => { 
+                import(dataUri).then((d) => {
                     data = d.default;
                 }).catch(e => {
                     console.log("error: ", e);
@@ -136,7 +136,7 @@
                 case ' ':
                 case ',':
                     word = word.trim();
-                    var new_instruct = skip && (ch =='\n');
+                    var new_instruct = skip && (ch == '\n');
                     if (word && !skip && (depth == sourceDepth)) {
                         if (/^(var|let|const|function)$/.test(word)) {
                             _wtype = word;
@@ -151,7 +151,7 @@
                         }
                         word = '';
                     }
-                    if (skip && new_instruct){                        
+                    if (skip && new_instruct) {
                         skip = false;
                     }
                     break;
@@ -286,53 +286,138 @@
         }
     });
 
-    igk.appendProperties(_NS, {
-        defineComponents() {
-            // TODO inject all component a litteral
-        },
-        initComponent() {
-            // TODO Init global component 
-        },
-        shared(data){
-            for(var i in data){
+    igk.appendProperties(_NS, {       
+        shared(data) {
+            for (var i in data) {
                 _app_shared_uses[i] = data[i];
             }
         }
     });
-    function initAppAndMount(app, t){
-        if (_app_shared_uses){
+    function initAppAndMount(app, t) {
+        if (_app_shared_uses) {
             for (let i in _app_shared_uses)
-                app.use(_app_shared_uses[i]);  
+                app.use(_app_shared_uses[i]);
         }
         app.mount(t);
     };
 
-    igk.winui.initClassControl("igk-vue-clone",function(){
+    igk.winui.initClassControl("igk-vue-clone", function () {
         // console.log('init clone ...');
-        const { createApp } = Vue; 
+        const { createApp } = Vue;
         const data = this.getAttribute('igk-data');
         let q = $igk(data).first();
-        if (q){ 
-            let c = q.getAttribute('igk-clone-data') || q.getHtml(); 
-            this.setHtml(c);                        
+        if (q) {
+            let c = q.getAttribute('igk-clone-data') || q.getHtml();
+            this.setHtml(c);
             initAppAndMount(createApp(), this.o);
         }
     });
     // +| dynamic create application with shared content
-    igk.winui.initClassControl("igk-vue-app",function(){
+    igk.winui.initClassControl("igk-vue-app", function () {
         // console.log('init clone ...');
-        const { createApp } = Vue; 
+        const { createApp } = Vue;
         const data = this.getAttribute('igk-data');
         let q = $igk(data).first();
-        if (q){ 
-            let c = q.getAttribute('igk-clone-data') || q.getHtml(); 
-            this.setHtml(c);                        
+        if (q) {
+            let c = q.getAttribute('igk-clone-data') || q.getHtml();
+            this.setHtml(c);
             initAppAndMount(createApp(), this.o);
         }
     });
 
     // init root view clonable data before main - application - start
-    $igk('.igk-vue-clonable').each_all(function(){
-        this.o.setAttribute('igk-clone-data', this.getHtml()); 
-    }); 
+    $igk('.igk-vue-clonable').each_all(function () {
+        this.o.setAttribute('igk-clone-data', this.getHtml());
+    });
+})();
+
+
+(function () {
+    let _app_component; 
+    /**
+     * 
+     * @param {*} assets asset object
+     * @param {*} component 
+     * @param {*} prefix 
+     */
+    function refImport(assets, component, prefix) {
+        prefix = prefix || '';
+        let tab = component.split('|');
+        component = tab[0];
+        const ext = tab[1] ?? 'js';
+        const s = prefix + "/" + component + "." + ext;
+        if (s.startsWith('../')) {
+            s = s.substring(3);
+        }
+        if (ext == 'vue') {
+            return () => assets.import(s);
+        }
+        let uri = "/" + assets.path(s);
+        return () => import(uri);
+    };
+    const _NS = igk.system.createNS('igk.js.vue3', {
+        initAsset(asset) {
+            const b = asset.assets;
+            const { sfc } = igk.js.vue3;
+            return {
+                /**
+                 * resolve path
+                 * @param {string} path 
+                 */
+                path(path) {
+                    return b + path;
+                },
+                /**
+                 * import .vue file
+                 * @param {string} path 
+                 */
+                import(path) {
+                
+                    const uri = b + path;
+                    return new Promise((resolve, reject) => {
+                        return window.fetch(uri).then((d) => {
+                            return d.text();
+                        }).then((src) => {
+                            sfc.loadSFC(src, resolve, reject); 
+                        }).catch((e) => {
+                            console.debug("failed to download." + uri, e);
+                        });
+                    });
+                }
+            }
+        },
+        /**
+         * 
+         * @param {*} AppComponent 
+         * @param {*} components 
+         * @param {*} assets asset object 
+         * @param {*} defineAsyncComponent 
+         * @param {*} prefix 
+         */
+        loadAsyncJsComponent(AppComponent, components, assets, defineAsyncComponent, prefix) {
+            for (let component of components) {
+                let rf = defineAsyncComponent(refImport(assets, component, prefix));
+                component = component.split('|')[0];
+                if (component.indexOf('/') != -1) {
+                    component = component.replaceAll('/', '.');
+                    let tab = component.split('.').filter(a => a && (a.length > 0));
+                    let ns = tab.slice(0, -1).join('.');
+                    let name = tab.slice(-1)[0];
+                    let p = {};
+                    p[name] = rf;
+                    igk.system.createPNS(AppComponent, ns, p)
+                    //igk.system.createExtensionProperty(AppComponent, ns, p);
+                } else {
+                    AppComponent[component] = rf;
+                }
+            }
+            _app_component = AppComponent;
+        }
+    });
+
+    igk.defineProperty(_NS, 'appComponents', {
+        get(){
+            return _app_component;
+        }
+    })
 })();

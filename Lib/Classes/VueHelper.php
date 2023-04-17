@@ -7,7 +7,9 @@
 
 namespace igk\js\Vue3;
 
-use IGK\Controllers\BaseController; 
+use IGK\Controllers\BaseController;
+use IGK\Helper\IO;
+use IGK\Helper\StringUtility;
 use IGK\Helper\ViewHelper;
 use igk\js\common\JSExpression;
 use igk\js\common\JSExpressionObjectResult;
@@ -25,6 +27,7 @@ use IGK\System\Html\HtmlReader;
 use IGK\System\Html\HtmlUtils;
 use IGK\System\IO\Path;
 use IGK\System\IO\StringBuilder;
+use IGK\System\Regex\Replacement;
 use IGKException;
 use ReflectionException;
 
@@ -35,11 +38,23 @@ use ReflectionException;
 abstract class VueHelper
 {
     /**
-     * resolve component directory 
-     * @return array 
+     * resolve components 
+     * @return array list of detected component in directory 
      */
-    public static function GetComponents(){
-        return [];
+    public static function GetComponents(string $component_dir, string $supports="vue|js"){
+        $tab = [];
+        $g = Replacement::RegexExpressionFromString('('.$supports.')$');
+        $dirln = strlen($component_dir);
+        foreach(IO::GetFiles($component_dir, $g, true) as $file){
+            $ext = igk_io_path_ext($file);
+            $key = igk_io_basenamewithoutext($file);
+            $dirname = dirname($file);
+            if ($s = substr($dirname, $dirln+1)){
+                $key = "./".$s."/".$key;
+            }
+            $tab[] = $key.'|'. $ext;
+        }
+        return $tab;
     }
 
    

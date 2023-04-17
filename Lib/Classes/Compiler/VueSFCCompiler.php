@@ -172,6 +172,10 @@ JS, $src);
             $this->script = $src;
         }
     }
+    /**
+     * get definition 
+     * @return array 
+     */
     public function def()
     {
         $t = [];
@@ -183,6 +187,13 @@ JS, $src);
         }
         return $t;
     }
+    /**
+     * 
+     * @param string $setup 
+     * @param null|string $inline 
+     * @return void 
+     * @throws IGKException 
+     */
     public static function GetLitteralSetupScript(string $setup, ?string $inline){
         $src = self::_GetLitteralResult($setup); 
         // + | direct object return to avoid this in context

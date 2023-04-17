@@ -13,14 +13,18 @@ use igk\js\common\JSAttribExpression;
 use igk\js\common\JSExpression;
 use igk\js\Vue3\JS\VueLazyImportExpression;
 use igk\js\Vue3\JS\VueLazyLoadExpression;
+use igk\js\Vue3\System\Controller\VueControllerMacrosExtension;
 use igk\js\Vue3\VueConstants;
+use igk\js\Vue3\VueHelper;
 use IGK\System\Exceptions\ArgumentTypeNotValidException;
 use IGK\System\Html\Dom\HtmlItemBase;
 use IGK\System\Html\Dom\HtmlNode;
 use IGK\System\Html\HtmlRenderer;
+use IGK\System\IO\Path;
 use IGK\System\IO\StringBuilder;
 use IGKException;
 use IGKHtmlDoc;
+use IGKResourceUriResolver;
 use ReflectionException;
 use stdClass;
 
@@ -31,11 +35,13 @@ use stdClass;
 class VueRouter extends VueLibraryBase{    
     const CDN = "https://unpkg.com/vue-router@4.0.15/dist/vue-router.global.js";
     const OPS_CDN = "https://unpkg.com/vue-router@4.0.15/dist/vue-router.global.prod.js";
-
+    const DEFAULT_ROUTE_FILE = 'vue-router.pinc';
     // type of rendering history
     const vueHashHistory = "createWebHashHistory";
     const vueMemoryHistory = "createMemoryHistory";
     const vueWebHistory = "createWebHistory";
+
+    const MenuRouteOptions = 'vue.routeOptions';
 
     /**
      * init document and return a instance of new router definition
@@ -48,13 +54,28 @@ class VueRouter extends VueLibraryBase{
         $doc->addTempScript($uri)->activate('defer');
         $ref = new static;
         if ($ctrl){
-            $route_name = $route_name ?? 'vue-router.pinc';
-            ViewHelper::Inc($ctrl->configFile($route_name),[
+            $ctrl::RegisterExtension(VueControllerMacrosExtension::class);
+            $route_name = $route_name ?? self::DEFAULT_ROUTE_FILE;
+            $definition = ViewHelper::Inc($ctrl->configFile($route_name),[
                 'router'=>$ref,
                 'ctrl'=>$ctrl
             ]);
+            if (is_array($definition)){
+                $ref->_initDefinition($definition);
+            }
         }
         return $ref;
+    }
+    /**
+     * load ad init definiont 
+     * @param mixed $def 
+     * @return void 
+     * @throws IGKException 
+     */
+    private function _initDefinition($def){
+        foreach($def as $k=>$v){
+            $this->addRoute($k, $v);
+        }
     }
     /**
      * history type
@@ -311,5 +332,18 @@ class VueRouter extends VueLibraryBase{
     public function getVarName()
     {
         return $this->id ?? 'router';
+    }
+
+    /**
+     * import component definition with lazy import technique
+     * @param mixed $name 
+     * @param mixed $ctrl 
+     * @return void 
+     */
+    public function lazyImport($name, $ctrl=null){
+        $ctrl = $ctrl ?? ViewHelper::CurrentCtrl();
+        $file = Path::Combine($ctrl->getVueAppDir(), $name);
+        $uri = IGKResourceUriResolver::getInstance()->resolveOnly($file);       
+        return VueHelper::LazyLoad($uri);
     }
 }

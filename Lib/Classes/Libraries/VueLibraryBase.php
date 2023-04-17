@@ -7,7 +7,9 @@
 // @desc: 
 namespace igk\js\Vue3\Libraries;
 
-abstract class VueLibraryBase implements IRefLibrary{
+use IGKObject;
+
+abstract class VueLibraryBase extends IGKObject implements IRefLibrary{
     const VUE = 'vue';
     /**
      * define name of this library

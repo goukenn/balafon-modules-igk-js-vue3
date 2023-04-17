@@ -64,8 +64,10 @@ class Vuei18n
        $obj->detectMethod = false;
        $obj->useObjectNotation = true;
        $default_lang = igk_getv($options, "default_lang", igk_configs()->default_lang);
+       $current_lang = R::GetCurrentLang();
        $sb = new StringBuilder;
-       $msg = JSExpression::Stringify((object)I18nLocaleHelper::LoadLocale($ctrl, $useglobal_resource, $default_lang), $obj);
+       $msg = JSExpression::Stringify((object)I18nLocaleHelper::LoadLocale($ctrl, $useglobal_resource, 'en'), $obj);
+ 
 
        $sb->appendLine(sprintf('let %s = %s(', $n, $method));
        $sb->appendLine(JSExpression::Stringify((object)[
@@ -77,37 +79,3 @@ class Vuei18n
        return $sb . '';
    }
 }
-
- /*
-
-// @author: C.A.D. BONDJE DOUE
-// @filename: Vuei18n.php
-// @date: 20230303 10:20:32
-// @desc: 
-namespace igk\js\Vue3\Libraries\i18n;
-
- 
-use IGK\Controllers\BaseController;
-use igk\js\common\JSExpression;
-use igk\js\common\IJSExpressionOptions;
-use igk\js\Vue3\Libraries\VueLibraryVar;
-use IGK\Resources\R;
-use IGK\System\IO\StringBuilder;
-use igk\js\Vue3_i18n\Helpers\Locale as I18nLocaleHelper;
-
-class Vuei18n
-{
-    public static function InitDoc($doc, ?BaseController $ctrl, bool $useglobal_resource = false , string $varName="i18n")
-    {
-        $mod = igk_require_module(\igk\js\Vue3_i18n::class);
-        $mod->initDoc($doc);
-        $i18n = new VueLibraryVar($varName, "createI18n", "VueI18n");
-        $i18n->setDeclarationListener(function ($n, $method, $option = null) use ($ctrl, $useglobal_resource): ?string {
-            return self::VueRenderI18nLocaleSetting($n, $method, $ctrl, $useglobal_resource, $option);            
-        });
-        return $i18n;
-    }
-  
-}
-
-*/

@@ -40,6 +40,12 @@ class RouterMenuBuilder extends \IGK\System\WinUI\Menus\Engine{
             if (igk_getv($v_menu_options, 'menu_hidden')){
                 return null;
             }
+        } else {
+            // no a router definition 
+            // if (($u=='#') || IGKValidator::IsUri($u)){
+                $g = $node->add('a')->setAttribute('href', $u)->setContent($text);
+                return $g;
+            //}
         }
         $g = $node->vRouterLink($u, [
             "template"=>'<div>menu _ '.$text.'</div>'

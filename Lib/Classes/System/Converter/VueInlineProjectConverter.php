@@ -7,6 +7,7 @@ namespace igk\js\Vue3\System\Converter;
 use IGK\Controllers\BaseController;
 use IGK\Helper\IO;
 use igk\js\Vue3\Compiler\VueSFCCompiler;
+use igk\js\Vue3\Controllers\VueInlineAssetResource;
 use igk\js\Vue3\VueConstants;
 use IGK\System\Console\Logger;
 use IGK\System\Html\Css\CssComment;
@@ -57,6 +58,15 @@ class VueInlineProjectConverter{
         $base = igk_io_basenamewithoutext($file);
         $dirname = dirname($path);
         if ($template){
+
+            foreach($template->getElementsByTagName('img') as $img){
+                $src = $img['src'];
+                if (igk_str_startWith($src, '@')){
+                    $src = ltrim(substr($src,1),'@');
+                    $img['src'] = new VueInlineAssetResource($src, $baseController);
+                }
+            }
+
             $file = Path::Combine($dirname, $base.'.phtml');
             $builder = new PHPScriptBuilder;
             $sb = new StringBuilder;

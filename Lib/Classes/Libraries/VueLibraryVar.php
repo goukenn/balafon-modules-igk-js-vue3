@@ -14,11 +14,10 @@ use IGK\System\Html\HtmlRendererOptions;
 */
 class VueLibraryVar extends VueLibrary{
     var $varName;
-
-    var $declarationListener;
+    private $m_declarationListener;
 
     public function setDeclarationListener(?callable $listener){
-        $this->declarationListener = $listener;
+        $this->m_declarationListener = $listener;
     }
     /**
      * get js variable name
@@ -62,7 +61,7 @@ class VueLibraryVar extends VueLibrary{
             $lib[$g] = new VueLibraryReference();
         }
         $lib[$g]->ref($this->getName());
-        if ($fc = $this->declarationListener){
+        if ($fc = $this->m_declarationListener){
             return $fc($this->varName, $this->m_name, $option);
         } 
         return null;

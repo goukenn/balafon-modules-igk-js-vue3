@@ -18,6 +18,7 @@ use igk\js\Vue3\System\WinUI\Menus\RouterMenuBuilder;
 use igk\js\Vue3\VueConstants;
 use IGK\System\Html\Dom\HtmlItemBase;
 use IGK\System\Html\Dom\HtmlNoTagNode;
+use IGK\System\Html\HtmlNodeTagExplosionDefinition;
 
 /**
  * bind sfc core application
@@ -123,7 +124,11 @@ if (!function_exists('igk_html_node_vue_component')) {
      */
     function igk_html_node_vue_component(string $tagname = 'div')
     {
+        list($tagname,,$classes) = HtmlNodeTagExplosionDefinition::ExplodeTag($tagname);
         $n = new VueComponent($tagname);
+        if ($classes){
+            $n->setClass($classes);
+        }   
         return $n;
     }
 }
