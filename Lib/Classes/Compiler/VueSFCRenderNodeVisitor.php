@@ -13,8 +13,10 @@ use igk\js\Vue3\Compiler\Traits\VueSFCRenderResolveComponentTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatBindingAttributeTraitTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatDirectiveAttributeTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatEventAttributeTrait;
+use igk\js\Vue3\System\Html\Dom\VueSFCTemplate;
 use igk\js\Vue3\VueConstants;
 use IGK\System\ArrayMapKeyValue;
+use IGK\System\Html\Dom\HtmlHostChildren;
 use IGK\System\Html\Dom\HtmlItemBase;
 use IGK\System\Html\Dom\HtmlTextNode;
 use IGK\System\Html\HtmlVisitor;
@@ -63,6 +65,11 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     public  static function GenerateRenderMethod(HtmlItemBase $node, &$options = null): ?string
     {
         $args = $preload = '';
+        if ($node instanceof VueSFCTemplate){
+            $children = $node->getChilds()->to_array();
+            $node = new HtmlHostChildren($children);
+        }
+
         $visitor = new static($node);
         $is_local = is_null($options) || $options->test;
         $options = Activator::CreateFrom($options, VueSFCRenderNodeVisitorOptions::class);
@@ -124,7 +131,9 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         }
         if ($t instanceof HtmlTextNode) {
             if (!empty($content)) {
-
+                if (empty(trim($content))&& ($first_child || $last_child)){
+                    return null;
+                }
                 self::AddLib($this->m_options, VueConstants::VUE_COMPONENT_TEXT);
                 $this->m_sb->append($tch . VueConstants::VUE_METHOD_RENDER . self::GetTextDefinition($content));
             }
@@ -198,7 +207,12 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 if ($this->isLoop($t, $attrs)) {
                     $v_loop = true;
                 }
-
+                // mark content as empty to avoid innerHTML setting
+                if ($has_childs && $content){
+                    if (empty(trim($content))){                        
+                        $content = '';
+                    }
+                }
 
                 // + | treat event - and binding       
                 if ($attrs || $has_childs|| (strpos($content, '<') !== false)) {
@@ -211,8 +225,10 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             }
         } else {
             if ($has_childs) {
-                $inner_content = $content;
-                $content = '';
+                if (!empty(trim($content))){
+                    $inner_content = $content;
+                    $content = '';
+                }
             }
         }
         if (!empty(trim($content))) {
@@ -229,7 +245,8 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             $s->append("[");
             if ($inner_content) {
                 self::AddLib($this->m_options, VueConstants::VUE_COMPONENT_TEXT);
-                $this->m_sb->append($tch . VueConstants::VUE_METHOD_RENDER . self::GetTextDefinition($inner_content) . ",");
+                // $this->m_sb->append($tch . VueConstants::VUE_METHOD_RENDER . self::GetTextDefinition($inner_content) . ",");
+                $s->append($tch . VueConstants::VUE_METHOD_RENDER . self::GetTextDefinition($inner_content) . ",");
             }
         }
         if ($v_conditional || $v_loop || $v_directives) {
