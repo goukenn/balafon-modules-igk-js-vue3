@@ -53,12 +53,17 @@ class VueBuildViewCommand extends VueCommandBase
 
         $t = igk_create_notagnode();
         $builder = new HtmlNodeBuilder($t);
-        ViewHelper::Inc($file, compact('builder', 't','ctrl'));
+        $f = Path::SearchFile($file,['.phtml'], [$ctrl->getDeclaredDir()]);
+        if (is_null($f)){
+            Logger::danger("missing file :".$file);
+            return -1;
+        }
+        ViewHelper::Inc($f, compact('builder', 't','ctrl'));
         $src = '';
         $options = null; // new VueSFCCompilerOptions;
         $html = $t->render();
         $render = VueSFCCompiler::ConvertToVueRenderMethod($t, $options);
-        if (file_exists($js = igk_io_remove_ext($file).VueConstants::VUE_JS_SETUP_EXT)){
+        if (file_exists($js = igk_io_remove_ext($f).VueConstants::VUE_JS_SETUP_EXT)){
             $sb = new StringBuilder();
             if ($render){
                 $sb->appendLine("import * as Vue from 'vue';");
@@ -71,12 +76,15 @@ class VueBuildViewCommand extends VueCommandBase
                     $sb->appendLine(sprintf('import {%s} from \'%s\';', implode(",", array_keys($v)), self::ResolvLibToDev($k)));
                 }
             }
+            // append i18n if required
             $sb->appendLine("import * as VueI18n from 'vue-i18n';");
             $sb->appendLine(sprintf("export default { %s...%s}", $render, trim(file_get_contents($js), '; ')));
+            // $sb->appendLine("export default { render(){ return h('div', 'check'+slots)} }");
             $src = $sb.'';
         }
 
-        igk_wln_e("/*building view : response */", $src);
+        echo $src;
+        exit;
     }
 
     static function ResolvLibToDev($d){

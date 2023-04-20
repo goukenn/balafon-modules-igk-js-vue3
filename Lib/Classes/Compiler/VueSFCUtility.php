@@ -6,6 +6,7 @@ namespace igk\js\Vue3\Compiler;
 
 use IGK\Helper\StringUtility;
 use igk\js\Vue3\VueConstants;
+use IGK\System\Regex\Replacement;
 
 ///<summary></summary>
 /**
@@ -21,8 +22,12 @@ abstract class VueSFCUtility{
      * @return string 
      */
     public static function InterpolateValue(string $v, string $start='{{', string $end='}}'){
-        $start = '{{';
+            $start = '{{';
             $end = '}}';
+            $rp = new Replacement;
+            $rp->add("/\\\$t\(/", "this.\$t(");
+
+
             $ln = strlen($v);
             $tp = 0;
             $pos = 0;
@@ -37,8 +42,12 @@ abstract class VueSFCUtility{
                     if (strrpos($vv, $end) !== false){
                         $v = igk_str_rm($v, $tp, $pos - $tp + (strlen($end)-1));
                         $vv = trim(igk_str_rm_last($vv, $end));
-                        $v = igk_str_insert('${'.$vv.'}', $v, $tp);
-                    
+                        // top invoke method - concatenation or more in render function we must use the this context 
+                        // replace start variable with this
+                        // EXPRESSION - REPLACEMENT - 
+                        $vv = $rp->replace($vv);
+
+                        $v = igk_str_insert('${'.$vv.'}', $v, $tp);                    
                         break;
                     }
                     $pos++;

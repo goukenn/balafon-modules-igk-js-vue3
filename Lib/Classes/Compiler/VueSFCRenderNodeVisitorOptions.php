@@ -23,5 +23,5 @@ class VueSFCRenderNodeVisitorOptions{
      * test mode
      * @var ?bool
      */
-    var $test;
+    var $test; 
 }
