@@ -56,23 +56,25 @@ class Vuei18n
      * @throws ArgumentTypeNotValidException 
      * @throws ReflectionException 
      */
-    public static function VueRenderI18nLocaleSetting(string $n, string $method, BaseController $ctrl, $useglobal_resource, $options ){
+    public static function VueRenderI18nLocaleSetting(string $n, string $method, BaseController $ctrl, bool $useglobal_resource, $options ){
         /**
         * @var IJSExpressionOptions $obj
         */
        $obj = igk_createobj();  
        $obj->detectMethod = false;
        $obj->useObjectNotation = true;
-       $default_lang = igk_getv($options, "default_lang", igk_configs()->default_lang);
+       // $default_lang = igk_getv($options, "default_lang", igk_configs()->default_lang);
+       $fallback_lang = igk_getv($options, "fallback_lang", 'en');
        $current_lang = R::GetCurrentLang();
        $sb = new StringBuilder;
-       $msg = JSExpression::Stringify((object)I18nLocaleHelper::LoadLocale($ctrl, $useglobal_resource, 'en'), $obj);
+       $msg = JSExpression::Stringify((object)I18nLocaleHelper::LoadLocale($ctrl, $useglobal_resource, $fallback_lang), $obj);
  
 
        $sb->appendLine(sprintf('let %s = %s(', $n, $method));
        $sb->appendLine(JSExpression::Stringify((object)[
-           "locale" => R::GetCurrentLang(),
-           "fallbackLocale" => igk_configs()->default_lang, 
+           "legacy"=>false, // + |  to support composition api - avoid error - 24
+           "locale" => $current_lang,
+           "fallbackLocale" => $fallback_lang, 
            "messages" => JSExpression::Litteral($msg),
        ], (object)['objectNotation' => true]));
        $sb->appendLine(");");

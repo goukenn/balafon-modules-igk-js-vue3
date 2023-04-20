@@ -211,9 +211,21 @@
         },
         detectVars: _detect_vars
     };
-
+    // +| core main application 
+    let _app_ = null;
+    let _capp_ = null;
     const _NS = igk.system.createNS("igk.js.vue3", {
         sfc,
+        mount(app, createApp){
+            _app_ = app;
+            _capp_ = createApp;
+        },
+        mainApp(createApp, option){
+            if (_app_){
+                return _capp_({..._app_});
+            }            
+            return createApp(_app_);
+        },
         import: async function (data) {
             const s = igk.system.modules.esm`${data}`;
             return import(s);

@@ -141,8 +141,12 @@ class ViewScriptRenderer
         if ($app_name) {
             $sb->append("const {$this->m_name} = ");
         }
-        $sb->append("createApp(");
-        $sb->append(JSExpression::Stringify($this->m_data, $js_options));
+        // $sb->append("createApp(");
+        $sb->appendLine('igk.js.vue3.mainApp(createApp');
+        $l = JSExpression::Stringify($this->m_data, $js_options);
+        if (!empty($l))
+            $l =','.$l;
+        $sb->append($l);
         $components = $this->m_components ?? [];
         foreach ($components as $k => $c) {
             $sc = JSExpression::Stringify($c, $js_options);
@@ -185,7 +189,7 @@ class ViewScriptRenderer
             // + | --------------------------------------------------------------------
             // + | do something
             // + |
-            $sb->append("igk.vue_app = $app_name;");
+            $sb->append("igk.js.vue3.vue_app = $app_name;");
             $sb->append($app_name);
         } else {
             $sb->append(")");

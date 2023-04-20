@@ -37,6 +37,9 @@ use ReflectionException;
  */
 abstract class VueHelper
 {
+    public static function LoadContentsAsTemplate(string $content, ?array $args=null){
+        igk_die("not implement");
+    }
     /**
      * resolve components 
      * @return array list of detected component in directory 
@@ -73,7 +76,7 @@ abstract class VueHelper
     public static function IncRouteOptions(string $path, $args=[], $routeOptions =[],  BaseController $ctrl=null){
         $defs = [];
         $defs['template']= ViewHelper::Article($path, $args);
-        if ($src = self::IncControllerArticleSetupScript($path.'.vue3-setup.js')){
+        if ($src = self::IncControllerArticleSetupScript($path. VueConstants::VUE_JS_SETUP_EXT)){
             $defs[] = $src;
         }
         if ($routeOptions){
@@ -95,7 +98,7 @@ abstract class VueHelper
             igk_die("controller required.");
         }
         $cf = Path::Combine( $ctrl->getArticlesDir(), $path);
-        foreach(['', '.vue3-setup.js','.vue.b', '.vue', '.jsx', '.js'] as $c){
+        foreach(['', VueConstants::VUE_JS_SETUP_EXT,'.vue.b', '.vue', '.jsx', '.js'] as $c){
             if (file_exists($f = $cf.$c)){
                 return VueScript::Include($f, $c? trim($c) : 'js');   
             }
@@ -161,7 +164,7 @@ abstract class VueHelper
     }
 
     /**
-     * include .vue file
+     * include server .vue file
      * @param string $file .vue file that implement SFC
      * @return null|string js expression string
      * @throws IGKException 

@@ -16,6 +16,7 @@ use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatEventAttributeTrait;
 use igk\js\Vue3\System\Html\Dom\VueSFCTemplate;
 use igk\js\Vue3\VueConstants;
 use IGK\System\ArrayMapKeyValue;
+use IGK\System\Exceptions\ArgumentTypeNotValidException;
 use IGK\System\Html\Dom\HtmlHostChildren;
 use IGK\System\Html\Dom\HtmlItemBase;
 use IGK\System\Html\Dom\HtmlTextNode;
@@ -23,6 +24,7 @@ use IGK\System\Html\HtmlVisitor;
 use IGK\System\IO\Configuration\ConfigurationEncoder;
 use IGK\System\IO\StringBuilder;
 use IGKException;
+use ReflectionException;
 
 ///<summary></summary>
 /**
@@ -49,6 +51,8 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     private $m_loop_group = [];
     private $m_directives = []; // chain directive
     private $m_single_item; // single item flags - to skip [...]
+    private $m_child_detect; // detect that an item required child block;
+    private $m_close_childs = 0;
     protected $skip = false; // skip flag for v-html and v-text
     private function __construct(HtmlItemBase $node)
     {
@@ -60,6 +64,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     /**
      * transform node to render method 
      * @param HtmlItemBase $node 
+     * @param ?VueSFCRenderNodeVisitorOptions $options 
      * @return ?string
      */
     public  static function GenerateRenderMethod(HtmlItemBase $node, &$options = null): ?string
@@ -149,7 +154,16 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         $v_skip = false;
         if (empty($tagname) || !$canrender) {
             $this->m_sb->append($tch);
+            $this->m_child_detect = $this->m_child_detect || $has_childs;
             return null;
+        }
+        ///child detected by skipping
+        if ($this->m_child_detect){
+            if (!$this->m_close_childs)
+                $s->append("[");
+            $tch = "";
+            $this->m_child_detect = false;
+            $this->m_close_childs= 1;
         }
         $attrs = $t->getAttributes()->to_array();
         $s->append(VueConstants::VUE_METHOD_RENDER . "(");
@@ -273,7 +287,18 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         }
         return true;
     }
-    protected function endVisit(HtmlItemBase $t, bool $has_childs, bool $last)
+    /**
+     * 
+     * @param HtmlItemBase $t 
+     * @param bool $has_childs 
+     * @param bool $last 
+     * @param mixed $end_visit 
+     * @return void 
+     * @throws IGKException 
+     * @throws ArgumentTypeNotValidException 
+     * @throws ReflectionException 
+     */
+    protected function endVisit(HtmlItemBase $t, bool $has_childs, bool $last, $end_visit)
     {
 
         if ($this->m_preservelist) {
@@ -340,7 +365,14 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             }
         } else if ($this->m_conditional_group) {
             //detect conditional group
-            igk_wln_e("need to close ... ");
+            igk_dev_wln_e("need to close ... ");
+        }
+        if ($end_visit){
+            if ($this->m_close_childs>0){
+                $this->m_close_childs = 0;
+                   $this->m_sb->append("]");
+            }
+           // igk_dev_wln("last item .... ".$this->m_close_childs);
         }
     }
     #endregion

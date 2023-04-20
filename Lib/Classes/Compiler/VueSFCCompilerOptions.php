@@ -22,4 +22,10 @@ class VueSFCCompilerOptions{
      * @var ?callable
      */
     var $resourceResolver;
+
+    /**
+     * for testing mode
+     * @var ?bool
+     */
+    var $test;
 }
