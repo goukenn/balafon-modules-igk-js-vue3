@@ -24,8 +24,8 @@ abstract class VueSFCUtility{
     public static function InterpolateValue(string $v, string $start='{{', string $end='}}'){
             $start = '{{';
             $end = '}}';
-            $rp = new Replacement;
-            $rp->add("/\\\$t\(/", "this.\$t(");
+            // $rp = new Replacement;
+            // $rp->add("/\\\$t\(/", "this.\$t(");
 
 
             $ln = strlen($v);
@@ -45,9 +45,9 @@ abstract class VueSFCUtility{
                         // top invoke method - concatenation or more in render function we must use the this context 
                         // replace start variable with this
                         // EXPRESSION - REPLACEMENT - 
-                        $vv = $rp->replace($vv);
-
-                        $v = igk_str_insert('${'.$vv.'}', $v, $tp);                    
+                        if ($vv = vue_js_treat_expression($vv)){
+                            $v = igk_str_insert('${'.$vv.'}', $v, $tp);                    
+                        }
                         break;
                     }
                     $pos++;

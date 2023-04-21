@@ -20,6 +20,9 @@ use IGK\System\Html\Dom\HtmlItemBase;
 use IGK\System\Html\Dom\HtmlNoTagNode;
 use IGK\System\Html\HtmlNodeTagExplosionDefinition;
 
+
+require_once __DIR__."/Lib/Func-helpers/global.php";
+
 /**
  * bind sfc core application
  * @param BaseController $ctrl 

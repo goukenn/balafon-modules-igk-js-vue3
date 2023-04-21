@@ -47,7 +47,6 @@ class VueSFCCompiler
      */
     public static function ConvertToVueRenderMethod(HtmlItemBase $node, & $options = null): ?string
     {
-
         return VueSFCRenderNodeVisitor::GenerateRenderMethod($node, $options);
     }
 
