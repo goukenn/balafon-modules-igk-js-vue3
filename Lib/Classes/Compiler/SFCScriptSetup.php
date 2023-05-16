@@ -5,6 +5,9 @@
 namespace igk\js\Vue3\Compiler;
 
 use \igk\js\common\IO\JSScriptReader;
+use IGKException;
+use IGK\System\Exceptions\ArgumentTypeNotValidException;
+use ReflectionException;
 
 ///<summary></summary>
 /**
@@ -65,6 +68,14 @@ class SFCScriptSetup
         }
         return $def;
     }
+    /**
+     * 
+     * @param string $src 
+     * @return string 
+     * @throws IGKException 
+     * @throws ArgumentTypeNotValidException 
+     * @throws ReflectionException 
+     */
     public static function TransformToThisContext(string $src):string{
         $s = "";
         $jsreader = new JSScriptReader;

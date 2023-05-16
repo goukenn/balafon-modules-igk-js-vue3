@@ -21,23 +21,21 @@ abstract class VueSFCUtility{
      * @param string $end 
      * @return string 
      */
-    public static function InterpolateValue(string $v, string $start='{{', string $end='}}'){
+    public static function InterpolateValue(string $v, string $start='{{', string $end='}}', bool $preserve=false, array $vars=[]){
             $start = '{{';
             $end = '}}';
-            // $rp = new Replacement;
-            // $rp->add("/\\\$t\(/", "this.\$t(");
-
 
             $ln = strlen($v);
             $tp = 0;
             $pos = 0;
-            while(($pos<$ln) && ($pos = strpos($v, $start))!==false){
+            $offset = 0;
+            while(($pos<$ln) && ($pos = strpos($v, $start, $offset))!==false){
                 //
                 $tp = $pos;
                 $pos += strlen($start);
                 $vv = '';
                 while($pos<$ln){
-                    $ch = StringUtility::ReadBrank($v, $pos);                  
+                    $ch = $v[$pos]; // StringUtility::ReadBrank($v, $pos);                  
                     $vv .= $ch;
                     if (strrpos($vv, $end) !== false){
                         $v = igk_str_rm($v, $tp, $pos - $tp + (strlen($end)-1));
@@ -45,8 +43,13 @@ abstract class VueSFCUtility{
                         // top invoke method - concatenation or more in render function we must use the this context 
                         // replace start variable with this
                         // EXPRESSION - REPLACEMENT - 
-                        if ($vv = vue_js_treat_expression($vv)){
-                            $v = igk_str_insert('${'.$vv.'}', $v, $tp);                    
+
+                        if ($preserve || ($vv = vue_js_treat_expression($vv, $vars))){
+                        
+                            $v = igk_str_insert('${'.$vv.'}', $v, $tp);   
+                            $offset = $tp+strlen($vv) + 3 ;
+                            $vv = ''; 
+                            $ln = strlen($v);                
                         }
                         break;
                     }
@@ -114,5 +117,34 @@ abstract class VueSFCUtility{
             $v_slot = true;
         }
         return $tag;
+    }
+
+    /**
+     * render library as contants declaration 
+     * @param array $lib 
+     * @return string 
+     */
+    public static function RenderLibraryAsConstantDeclaration(array $lib, ?string & $globalImport = ''): string {
+        $sb = [];
+        $globalImport = '';
+        foreach($lib as $k=>$v){
+            if (is_array($v)){
+                $tab = array_keys($v);
+                sort($tab);
+                $sb[] = sprintf('const { %s } = '.$k.';', implode(",", $tab));
+            } else {
+                $globalImport .= 'import '.$v.' from \''.$k.'\';';
+            }
+        }
+        return implode("", $sb);
+    }
+    public static function RenderLibraryAsImportStatementDeclaration(array $lib): string {
+        $sb = [];
+        foreach($lib as $k=>$v){
+            $tab = array_keys($v);
+            sort($tab);
+            $sb[] = sprintf('import { %s } from '.$k.';', implode(",", $tab));
+        }
+        return implode("", $sb);
     }
 }

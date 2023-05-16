@@ -14,7 +14,7 @@ use IGK\Tests\Controllers\ModuleBaseTestCase;
  */
 class VueGenerateRenderJSMethodEventTest extends ModuleBaseTestCase
 {
-    public function test_render(){
+    public function test_render_basic_basd_ddd(){
         $d = new VueComponent('div');
         $d->vOn("click", "()=>console.log('ok')")->setContent('click me');
         $this->assertEquals(
@@ -43,8 +43,10 @@ class VueGenerateRenderJSMethodEventTest extends ModuleBaseTestCase
 
     public function test_render_vhtml_skip_content(){
         $d = new VueComponent('div');
-        $d->div()->vHtml("<i>hello friend</i>")->span()->vFor('i in [1,3,4]')->div()->Content = 'finish';
-        //igk_wln_e($d->render());
+        $e = $d->div();
+        $e->vHtml("<i>hello friend</i>") // will skip content 
+        ->span()->vFor('i in [1,3,4]')->div()->Content = 'finish';
+ 
         $this->assertEquals(
             "render(){const{h}=Vue;return h('div',[h('div',{innerHTML:'<i>hello friend</i>'})])}",
             VueSFCCompiler::ConvertToVueRenderMethod($d)

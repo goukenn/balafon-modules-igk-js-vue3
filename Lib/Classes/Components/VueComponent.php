@@ -6,9 +6,12 @@ use igk\js\Vue3\VueConstants;
 use IGK\System\Html\Dom\HtmlNode;
 use IGK\System\Html\HtmlLoadingContext;
 use IGK\System\Html\IHtmlContextContainer;
+use IGKException;
 
-
-/** @package igk\js\Vue3\Components */
+/**
+ * base vue component node
+ * @package igk\js\Vue3\Components 
+ * */
 class VueComponent extends HtmlNode implements IHtmlContextContainer{
     /**
      * get component loading context 
@@ -26,18 +29,23 @@ class VueComponent extends HtmlNode implements IHtmlContextContainer{
         }
         return $context;
     }
+    /**
+     * 
+     * @param mixed $n 
+     * @param mixed $attributes 
+     * @param mixed $indexOrArgs 
+     * @return mixed 
+     * @throws IGKException 
+     */
     public static function CreateWebNode($n, $attributes = null, $indexOrArgs = null)
     {
         if ($n =  parent::CreateWebNode($n, $attributes, $indexOrArgs)){
             if (!($n instanceof static)){
                 $n = new VueComponentHost($n);
             }
-        }
-        
-        return $n;
-       
+        } 
+        return $n; 
     }
-
     /**
      * create a node on loader 
      * @param string $name 
@@ -48,8 +56,6 @@ class VueComponent extends HtmlNode implements IHtmlContextContainer{
     {
         $n = new self($name);
         if ($param) $n->setAttributes($param);
-        return $n;
-        
-    }
-   
+        return $n;        
+    }   
 }

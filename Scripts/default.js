@@ -3,6 +3,7 @@
 
 "use strict";
 (function () {
+    // import('./vite.js');
     const _sfc_register = {};
     // store shared data between different app 
     const _app_shared_uses = {};
@@ -70,18 +71,17 @@
             prom
         ).catch(() => {
 
-        })
-            .then(() => {
-                if (template) {
-                    let rdata = {
-                        "template": template.o.innerHTML,
-                        ...data
-                    };
-                    resolve(rdata);
-                } else if (reject) {
-                    reject();
-                }
-            });
+        }).then(() => {
+            if (template) {
+                let rdata = {
+                    "template": template.o.innerHTML,
+                    ...data
+                };
+                resolve(rdata);
+            } else if (reject) {
+                reject();
+            }
+        });
     };
 
     /**
@@ -214,17 +214,25 @@
     // +| core main application 
     let _app_ = null;
     let _capp_ = null;
+    let _initComponent_ = null;
     const _NS = igk.system.createNS("igk.js.vue3", {
         sfc,
+        /**
+         * register and init component method
+         * @param {*} defineComponent 
+         */
+        initComponent(defineComponent){
+            _initComponent_ = defineComponent;
+        },
         mount(app, createApp){
             _app_ = app;
             _capp_ = createApp;
         },
-        mainApp(createApp, option){
+        createApp(createApp, option){ 
             if (_app_){
-                return _capp_({..._app_});
+                return _capp_(option);
             }            
-            return createApp(_app_);
+            return createApp(option);
         },
         import: async function (data) {
             const s = igk.system.modules.esm`${data}`;
@@ -256,7 +264,8 @@
          */
         loadScript(s) {
             s = _NS.resolve(s);
-            var p = new Promise((resolve) => {
+            let type = '';
+            var p = new Promise((resolve, reject) => {
                 return fetch(s, {
                     method: 'GET',
                     headers: {
@@ -266,9 +275,47 @@
                         "IGK-AJX-APP": "vue"
                     }
                 }).then((d) => {
-                    return d.text();
+                    if (d.status==200){
+                        // console.log(d.headers);
+                        if (/text\/javascript/.test(d.headers.get('content-type'))){
+                            type='js';
+                        }
+                        return d.text();
+                    }
+                    throw new Error('missing');
                 }).then((t) => {
-                    _load_data(t, resolve);
+                    // console.log("load data" ,t, type);
+                    if (type=='js'){
+                        // + | import from type model 
+                        // + | js content must export default properties
+                        let dataUri = igk.system.modules.esm `${t}`; // `const { h } = Vue; export default{data(){return {}},render(){return h("div", "hi")}}`;
+                        let prom = [];
+                        let data = null;
+                        prom.push(
+                            import(dataUri).then((d) => { 
+                                data = d.default;                                
+                            }).catch(e => {
+                                console.error("error: ", e);
+                                reject();
+                            })
+                        );
+                        return Promise.all(prom).then(d=>{    
+                            return resolve(data);
+                        }); 
+                        // return resolve((function(){
+                        //     const {h } = Vue;
+                        //     return {
+                        //     "template":"<div>inline data</div>",
+                        //     render(){
+                        //         return h('div',  'for inline data')
+                        //     }
+                        // };
+                        // })());
+                    }else{
+                        _load_data(t, resolve);
+                    }
+                }).catch(e=>{
+                    reject(e);
                 });
             });
             return p;
@@ -364,7 +411,7 @@
         if (ext == 'vue') {
             return () => assets.import(s);
         }
-        let uri = "/" + assets.path(s);
+        let uri = assets.path(s);
         return () => import(uri);
     };
     const _NS = igk.system.createNS('igk.js.vue3', {
@@ -433,3 +480,5 @@
         }
     })
 })();
+
+import ('./vite.js');

@@ -257,7 +257,7 @@ abstract class VueMacrosExtensions{
      * @throws IGKException 
      * @throws EnvironmentArrayException 
      */
-    public static function vComponent(HtmlNode $node){
+    public static function vComponent(HtmlNode $node){        
         $n = new VueComponentNode();
         $node->add($n);
         return $n;
@@ -328,8 +328,8 @@ abstract class VueMacrosExtensions{
     /**
      * append slot node
      */
-    public static function vSlot(HtmlNode $node){
-        $n = new VueSlot();
+    public static function vSlot(HtmlNode $node, ?string $name=null){
+        $n = new VueSlot($name);        
         $node->add($n);
         return $n;
     }

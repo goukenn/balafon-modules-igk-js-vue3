@@ -18,9 +18,13 @@ use IGKException;
 use IGK\System\Exceptions\ArgumentTypeNotValidException;
 use ReflectionException;
 use IGK\System\Exceptions\EnvironmentArrayException;
+use IGKHtmlDoc;
 
 class Vuei18n
 {
+    const VAR_NAME = 'i18n';
+
+    var $options;
     /**
      * init document helper 
      * @param mixed $doc 
@@ -33,13 +37,17 @@ class Vuei18n
      * @throws ReflectionException 
      * @throws EnvironmentArrayException 
      */
-    public static function InitDoc($doc, ?BaseController $ctrl, bool $useglobal_resource = false , string $varName="i18n")
+    public static function InitDoc(IGKHtmlDoc $doc, ?BaseController $ctrl, bool $useglobal_resource = false , string $varName= self::VAR_NAME)
     {
         $mod = igk_require_module(\igk\js\Vue3_i18n::class);
         $mod->initDoc($doc);
         $i18n = new VueLibraryVar($varName, "createI18n", "VueI18n");
-        $i18n->setDeclarationListener(function ($n, $method, $options = null) use ($ctrl, $useglobal_resource): ?string {
-            return self::VueRenderI18nLocaleSetting($n, $method, $ctrl, $useglobal_resource, $options);    
+        $i18n->setDeclarationListener(function ($n, $method, $options = null) use ($ctrl,  $i18n, $useglobal_resource): ?string {
+            $ns = null;
+            if ($i18n->options){
+                $ns = $i18n->options->entryNamespace;
+            }
+            return self::VueRenderI18nLocaleSetting($n, $method, $ctrl, $ns, $useglobal_resource, $options);    
         });
         return $i18n;
     }
@@ -56,7 +64,7 @@ class Vuei18n
      * @throws ArgumentTypeNotValidException 
      * @throws ReflectionException 
      */
-    public static function VueRenderI18nLocaleSetting(string $n, string $method, BaseController $ctrl, bool $useglobal_resource, $options ){
+    public static function VueRenderI18nLocaleSetting(string $n, string $method, BaseController $ctrl, ?string $entryNamespace, bool $useglobal_resource, $options ){
         /**
         * @var IJSExpressionOptions $obj
         */
@@ -68,9 +76,9 @@ class Vuei18n
        $current_lang = R::GetCurrentLang();
        $sb = new StringBuilder;
        $msg = JSExpression::Stringify((object)I18nLocaleHelper::LoadLocale($ctrl, $useglobal_resource, $fallback_lang), $obj);
- 
+       $ns = $entryNamespace;
 
-       $sb->appendLine(sprintf('let %s = %s(', $n, $method));
+       $sb->appendLine(sprintf('const %s = %s(', $n, $method));
        $sb->appendLine(JSExpression::Stringify((object)[
            "legacy"=>false, // + |  to support composition api - avoid error - 24
            "locale" => $current_lang,
@@ -78,6 +86,26 @@ class Vuei18n
            "messages" => JSExpression::Litteral($msg),
        ], (object)['objectNotation' => true]));
        $sb->appendLine(");");
+
+       $sb->set('const '.$n . '=(function({'.$method.'}){ '     
+        .$sb.'return '.$n.';})( {'.$method.'});');
        return $sb . '';
+   }
+   public static function BuildLocaleDefinition( BaseController $ctrl, $useglobal_resource, $fallback_lang){
+        $obj = igk_createobj();  
+        $sb = new StringBuilder;
+        $obj->detectMethod = false;
+        $obj->useObjectNotation = true;
+        $current_lang = 'en';
+        $msg = JSExpression::Stringify((object)I18nLocaleHelper::LoadLocale($ctrl, $useglobal_resource, $fallback_lang), $obj);
+
+        $sb->appendLine(JSExpression::Stringify((object)[
+            "legacy"=>false, // + |  to support composition api - avoid error - 24
+            "locale" => $current_lang,
+            "fallbackLocale" => $fallback_lang, 
+            "messages" => JSExpression::Litteral($msg),
+        ], (object)['objectNotation' => true]));
+
+        return $sb.'';
    }
 }

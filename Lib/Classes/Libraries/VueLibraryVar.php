@@ -14,6 +14,7 @@ use IGK\System\Html\HtmlRendererOptions;
 */
 class VueLibraryVar extends VueLibrary{
     var $varName;
+    var $options;
     private $m_declarationListener;
 
     public function setDeclarationListener(?callable $listener){
@@ -40,8 +41,7 @@ class VueLibraryVar extends VueLibrary{
                 $r = [];
                 $options->setRef($key, $r);
             }
-        } else{
-
+        } else if (is_object($options)){
             if (!property_exists($options, $key)){
                 $options->{$key} = []; 
             }

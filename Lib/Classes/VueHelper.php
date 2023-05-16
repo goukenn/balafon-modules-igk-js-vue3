@@ -37,8 +37,17 @@ use ReflectionException;
  */
 abstract class VueHelper
 {
-    public static function LoadContentsAsTemplate(string $content, ?array $args=null){
-        igk_die("not implement");
+    /**
+     * 
+     * @param string $content 
+     * @param null|array $args 
+     * @return never 
+     * @throws IGKException 
+     * @throws ArgumentTypeNotValidException 
+     * @throws ReflectionException 
+     */
+    public static function LoadContentsAsTemplate(string $content, ?array $args=null): ?string{
+        igk_die(__METHOD__ . ". not implement : ".$content);
     }
     /**
      * resolve components 

@@ -14,18 +14,23 @@ use IGK\System\Console\Logger;
 */
 class VueMakeSFCComponentCommand extends VueCommandBase{
     var $command = '--vue3:make-sfc-component';
-    public function exec($command , ?string $name=null, ?string $controller=null) { 
-        empty($name) && igk_die("name required");
-        $ctrl = self::GetController($controller, false);
+    var $desc = 'make sfc component';
+    var $usage = 'filename [options]';
+    public function exec($command , ?string $name=null) { 
+        empty($name) && igk_die("name required"); 
         $f = $name;
-        if (igk_io_path_ext($f)!='vue'){
+        if (igk_io_path_ext($f) != 'vue'){
             $f.=".vue";
         }
         $component = new VueSFCFile;
+        $component->template()->div()->Content = 'Hello component,'.basename($name);
 
-        igk_io_w2file($f, $component->render());
+        $component->script();
 
-        Logger::sucess("output: ", $f);
+        $component->style();
+
+        igk_io_w2file($f, $component->render((object)['Indent'=>true]));
+        Logger::success("output: ", $f);
     }
 
 }

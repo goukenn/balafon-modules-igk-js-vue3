@@ -1,0 +1,11 @@
+<?php
+
+igk_require_module(igk\js\Vue3::class);
+
+$builder([
+    "vue_app"=>[
+        '@'=>[
+            '<% project.config.app.id %>',
+        ] 
+    ]
+]);

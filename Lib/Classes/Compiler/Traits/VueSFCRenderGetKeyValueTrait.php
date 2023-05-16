@@ -41,7 +41,7 @@ trait VueSFCRenderGetKeyValueTrait{
             return null;
         }
         if ($v instanceof IHtmlGetValue)
-            $v = $v->getValue($options);
+            $v = $v->getValue(null);
         else if ($v instanceof HtmlItemBase){
             igk_die("not allowed");
         }
@@ -50,7 +50,8 @@ trait VueSFCRenderGetKeyValueTrait{
         }
         if (!$preserve && preg_match("/{/",$v)){
             // is mustache replace with ${}express
-            $v = VueSFCUtility::InterpolateValue($v, '{{', '}}');          
+            $args = $options && $options->contextVars  ? $options->contextVars[0] : [];
+            $v = VueSFCUtility::InterpolateValue($v, '{{', '}}', $preserve, $args);          
             return igk_str_surround(trim($v, '`'),"`");
         }
         if (strpos($v,"'")!==false){          

@@ -5,6 +5,7 @@
 namespace igk\js\Vue3;
 
 use IGK\System\Html\Dom\HtmlItemBase;
+use IGKResourceUriResolver;
 
 igk_require_module(\igk\js\common::class);
 require_once $this->m_dir . "/Lib/Classes/VueConstants.php";
@@ -30,10 +31,13 @@ $reg("initDoc", function ($doc) {
                 $uri = igk_environment()->isDev() ? VueConstants::API_URL : VueConstants::API_OPS_URL;
         }        
         $doc->addTempScript($uri)
-            ->activate("defer")
+            // ->activate("defer")
             ->setAttribute("crossorigin" , "anonymous");
     }
-    $doc->addTempScript($this->getScriptsDir()."/default.js")->activate('defer');     
+    $sc_dir = $this->getScriptsDir();
+    //expose directory access 
+    IGKResourceUriResolver::getInstance()->resolve($sc_dir);
+    $doc->addTempScript($sc_dir."/default.js")->activate('defer');     
 });
 
 // + | -------------------------------------------------------------------------

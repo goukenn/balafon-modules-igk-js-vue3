@@ -24,4 +24,15 @@ class VueSFCRenderNodeVisitorOptions{
      * @var ?bool
      */
     var $test; 
+
+    /**
+     * @var ?inloop
+     */
+    var $inLoop; // in loop flags
+
+    /**
+     * context vars 
+     * @var mixed
+     */
+    var $contextVars = [];
 }

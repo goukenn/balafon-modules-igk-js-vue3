@@ -33,8 +33,8 @@ class VueApplicationScript extends VueScript
     {
         parent::initialize();
         $this['type'] = 'module';
-        // $this['async'] = true;
-        // $this->activate('defer');
+        $this['async'] = true;
+        $this->activate('defer');
 
     }
     protected function __AcceptRender($options = null):bool
@@ -76,7 +76,7 @@ class AsyncRender{
         $this->sc = $sc;
     }
     public function render($options=null){
-        // return sprintf("igk.ready(async function(){%s});", $this->sc->render($options).'');
-        return  $this->sc->render($options);
+        return sprintf("igk.ready(async function(){%s});", $this->sc->render($options).'');
+        // return  $this->sc->render($options);
     }
 }

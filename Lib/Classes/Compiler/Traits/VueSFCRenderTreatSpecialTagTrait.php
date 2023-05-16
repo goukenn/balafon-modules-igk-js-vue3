@@ -33,8 +33,9 @@ trait VueSFCRenderTreatSpecialTagTrait{
         $a = '';
         unset($attrs['name']);
         if ($attrs){
+            $ch = '';
             $bs = new StringBuilder;
-            $a = $this->handleAttributes($this->node, $attrs, $bs,true,true,false,$directive, $skip, $loop, $conditional, null, '', false);
+            $a = $this->handleAttributes($this->node, $attrs, $bs,true,true,false,$directive, $skip, $loop, $conditional, null, $ch, false);
             $a = $bs.'';
         }
         //$this->requestArgs['slots'] = 1;

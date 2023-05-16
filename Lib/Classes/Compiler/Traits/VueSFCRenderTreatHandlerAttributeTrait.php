@@ -30,8 +30,7 @@ trait VueSFCRenderTreatHandlerAttributeTrait{
         & $v_loop,
         & $v_conditional,
         $context,
-        $ch='', $preserve=false){
-        $content = '';
+        & $ch='', $preserve=false, ?string & $content = ''){        
         if (!$preserve && isset($attrs[$tk = 'v-pre'])) {
             $content = $t->getInnerHtml();
             array_unshift($this->m_preservelist, $t);
@@ -56,6 +55,10 @@ trait VueSFCRenderTreatHandlerAttributeTrait{
                 $skip = true;
                 $content = igk_getv($attrs, $ck);
                 unset($attrs[$ck]);
+                if (empty(igk_getv($attrs,'innerHTML')) && self::DetectHtmlSupport($content) ){
+                    $attrs['innerHTML'] = $content;
+                    $content = '';
+                }
             }
             if (key_exists($ck = 'v-text', $attrs)) {
                 $skip = true;
@@ -68,7 +71,7 @@ trait VueSFCRenderTreatHandlerAttributeTrait{
             if ($this->isConditionnal($t, $attrs, $first_child, $last_child)) {
                 $v_conditional = true;
             }
-            if ($this->isLoop($t, $attrs)) {
+            if ($this->isLoop($t, $attrs, $this->m_options)) {
                 $v_loop = true;
             }
             // mark content as empty to avoid innerHTML setting
@@ -79,8 +82,8 @@ trait VueSFCRenderTreatHandlerAttributeTrait{
             }
 
             // + | treat event - and binding       
-            if ($attrs || $has_childs|| (strpos($content, '<') !== false)) {
-                if ($g_attr = self::_GetAttributeStringDefinition($attrs, $content, $context, $this->m_options, $directives, $preserve)) {
+            if ($attrs || $has_childs|| (strpos($content, '<') !== false) || (strpos($content, '&')!== false)) {
+                if ($g_attr = self::_GetAttributeStringDefinition($t, $attrs, $content, $context, $this->m_options, $directives, $preserve)) {
                     $s->append($ch . "{" . $g_attr . "}");
                     $ch = ',';
                     $content = '';

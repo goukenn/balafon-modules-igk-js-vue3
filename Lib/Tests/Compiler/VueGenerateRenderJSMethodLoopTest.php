@@ -33,7 +33,7 @@ class VueGenerateRenderJSMethodLoopTest extends ModuleBaseTestCase
             VueSFCCompiler::ConvertToVueRenderMethod($d)
         );
     }
-    public function test_render_destruct_bind()
+    public function test_render_destruct_bind_loop()
     {
         $d = new VueComponent('div');
         $d->vFor("{i} in [{i:10,value:'one'},{i:20,value:'two'}]")

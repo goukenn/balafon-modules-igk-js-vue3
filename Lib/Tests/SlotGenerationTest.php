@@ -18,7 +18,7 @@ class SlotGenerationTest extends ModuleBaseTestCase{
         $d = igk_create_notagnode(); 
         $d->div()->slot(); 
         $s = VueSFCCompiler::ConvertToVueRenderMethod($d); 
-        $expected = 'render(){const{h,useSlots}=Vue;const slots=useSlots();return [h(\'div\',[slots.default?slots.default():null])]}'; 
+        $expected = 'render(){const{h,useSlots}=Vue;const slots=useSlots();return h(\'div\',[slots.default?slots.default():null])}'; 
         $this->assertEquals($expected, 
         $s, 'not matching'); 
     }
@@ -26,7 +26,7 @@ class SlotGenerationTest extends ModuleBaseTestCase{
         $d = igk_create_notagnode(); 
         $d->div()->slot()->setAttribute('name','marche'); 
         $s = VueSFCCompiler::ConvertToVueRenderMethod($d); 
-        $expected = 'render(){const{h,useSlots}=Vue;const slots=useSlots();return [h(\'div\',[slots.marche?slots.marche():null])]}'; 
+        $expected = 'render(){const{h,useSlots}=Vue;const slots=useSlots();return h(\'div\',[slots.marche?slots.marche():null])}'; 
         $this->assertEquals($expected, 
         $s, 'not matching'); 
     }
@@ -34,7 +34,7 @@ class SlotGenerationTest extends ModuleBaseTestCase{
         $d = igk_create_notagnode(); 
         $d->div()->slot()->setAttribute('name','marche')->setAttribute(':msg', 'myssage'); 
         $s = VueSFCCompiler::ConvertToVueRenderMethod($d); 
-        $expected = 'render(){const{h,useSlots}=Vue;const slots=useSlots();return [h(\'div\',[slots.marche?slots.marche({msg:myssage}):null])]}'; 
+        $expected = 'render(){const{h,useSlots}=Vue;const slots=useSlots();return h(\'div\',[slots.marche?slots.marche({msg:myssage}):null])}'; 
         $this->assertEquals($expected, 
         $s, 'not matching'); 
     }
@@ -49,6 +49,15 @@ class SlotGenerationTest extends ModuleBaseTestCase{
         $this->assertEquals($expected, 
         $s, 'not matching'); 
     }
+    public function test_render_slot_next_sub_item_item(){
+        $d = igk_create_notagnode(); 
+        $d->div();
+        $d->slot();  
+        $s = VueSFCCompiler::ConvertToVueRenderMethod($d); 
+        $expected = "render(){const{h,useSlots}=Vue;const slots=useSlots();return [h('div'),slots.default?slots.default():null]}";
+        $this->assertEquals($expected, 
+        $s, 'not matching'); 
+    }
     public function test_render_slot_after_text(){
         $d = igk_create_notagnode(); 
         $builder  = new HtmlNodeBuilder($d);
@@ -60,7 +69,7 @@ class SlotGenerationTest extends ModuleBaseTestCase{
         ], $d);        
 
         $s = VueSFCCompiler::ConvertToVueRenderMethod($d); 
-        $expected = 'render(){const{h,Text,useSlots}=Vue;const slots=useSlots();return [h(\'div\',[h(Text,\'try to handle slots \'),slots.default?slots.default():h(Text,\'presentation du slot\')])]}'; 
+        $expected = 'render(){const{h,Text,useSlots}=Vue;const slots=useSlots();return h(\'div\',[h(Text,\'try to handle slots \'),slots.default?slots.default():h(Text,\'presentation du slot\')])}'; 
         $this->assertEquals($expected, 
         $s, 'not matching'); 
     }
@@ -76,7 +85,7 @@ class SlotGenerationTest extends ModuleBaseTestCase{
         ], $d);        
 
         $s = VueSFCCompiler::ConvertToVueRenderMethod($d); 
-        $expected = 'render(){const{h,Text,useSlots}=Vue;const slots=useSlots();return [h(\'div\',[h(Text,\'try to handle slots \'),slots.default?slots.default():h(Text,\'presentation du slot\')])]}'; 
+        $expected = 'render(){const{h,Text,useSlots}=Vue;const slots=useSlots();return h(\'div\',[h(Text,\'try to handle slots \'),slots.default?slots.default():h(Text,\'presentation du slot\')])}'; 
         $this->assertEquals($expected, 
         $s, 'not matching'); 
     }

@@ -9,6 +9,8 @@ use IGK\System\Exceptions\ArgumentTypeNotValidException;
 use IGK\System\Html\Css\CssParser;
 use IGK\System\Html\Dom\HtmlItemBase;
 use IGK\System\Html\Dom\HtmlNode;
+use IGK\System\Html\Dom\HtmlNoTagNode;
+use IGK\System\IO\StringBuilder;
 use IGKException;
 use ReflectionException;
 
@@ -71,7 +73,7 @@ class VueSFCCompiler
         if (!($src = file_get_contents($file))) {
             return null;
         }
-        $g = igk_create_node('div');
+        $g = new HtmlNoTagNode();
         if (!$g->load($src)) {
             return null;
         }
@@ -85,6 +87,24 @@ class VueSFCCompiler
         array_map([$result, "mapScript"], $g->getElementsByTagName('script'));
         array_map([$result, "mapStyle"], $g->getElementsByTagName('style'));
         return $result;
+    }
+    public function to_js():string{
+        $sb = new StringBuilder;
+        $src = '';
+        if($this->template){
+            $node = new HtmlNoTagNode();
+            $node->load($this->template);
+            $src = $this->ConvertToVueRenderMethod($node);
+        }
+        $sb->appendLine(implode("", [
+            "import * as Vue from 'vue';",
+            'export default (function(){', 
+                'return {',
+                    $src,
+                '}',                
+            '})()'
+        ]));
+        return $sb;
     }
     public static function GenClassIdentifier($compiler, $options)
     {
@@ -103,7 +123,14 @@ class VueSFCCompiler
         }
         $this->template = $a->getInnerHtml();
     }
-    public function parseCssStyleToCss($src, ?string $scoped_id = null)
+    /**
+     * parse css source
+     * @param mixed $src 
+     * @param null|string $scoped_id 
+     * @return null|string 
+     * @throws IGKException 
+     */
+    public function parseCssStyleToCss($src, ?string $scoped_id = null): string
     {
         $tab = CssParser::Parse($src);
         $id = $scoped_id;
@@ -135,6 +162,12 @@ class VueSFCCompiler
         }
         $this->styles .= $src;
     }
+    /**
+     * 
+     * @param mixed $id 
+     * @param mixed $key 
+     * @return string 
+     */
     protected function processCssSelector($id, $key)
     {
         $tab = explode(',', $key);

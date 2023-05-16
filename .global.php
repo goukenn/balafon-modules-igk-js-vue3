@@ -48,23 +48,65 @@ JS, $compile->styles, $compile->id);
     return $t;
 }
 /**
- * bind manifest 
+ * bind manifest to document 
  * @param mixed $doc HtmlDoc
  * @param mixed $assets assets directory 
  * @return bool 
  * @throws IGKException 
  */
-function vue3_bind_manifest($doc, $assets)
+function vue3_bind_manifest(IGKHtmlDoc $doc, string $assets, $type='text/javascript', $imports = true)
 {
     if (!file_exists($f = $assets . "/manifest.json")) {
         return false;
     }
+    $main_app = false;
     $rp = json_decode(file_get_contents($f));
     if ($vendor = igk_getv($rp, "chunk-vendors.js")) {
         $doc->addTempScript($assets . "/" . $vendor)->activate("defer");
     }
     if ($app = igk_getv($rp, "app.js")) {
         $doc->addTempScript($assets . "/" . $app)->activate("defer");
+        $main_app = true;
+    }else{
+        // search for entry point 
+        $entries = [];
+        foreach ($rp as $key => $value) {            
+            if (igk_getv($value, 'isEntry')=== true){
+                $entries[$key] = $value;
+            }
+        }
+
+        if ($entries){
+            // load entries
+            if (count($entries)>1){
+                // treatement 
+                igk_die('case not implement .');
+            }else{
+                $value = array_values($entries)[0];
+                if ($value->css){
+                    // bind cvss 
+                    foreach($value->css as $f){
+                        $doc->addTempStyle($assets . "/" . $f);
+                    }
+                }
+                if ($imports && $value->imports){
+                    // bind cvss 
+                    foreach($value->imports as $f){
+                        if ($cf = igk_getv($rp, $f)){
+                            $f = $cf->file;
+                        }
+                        $doc->addTempScript($assets . "/" . $f)
+                        ->setAttribute('type', $type)
+                        ->activate("defer");
+                    }
+                }
+                $doc->addTempScript($assets . "/" . $value->file)
+                ->setAttribute('type', $type)
+                ->activate("defer");
+                $main_app = true;
+            }
+        }
+        
     }
     $styling = [];
     if ($app_css = igk_getv($rp, 'chunk-vendors.css')) {
@@ -76,7 +118,7 @@ function vue3_bind_manifest($doc, $assets)
     foreach ($styling as $f) {
         $doc->addTempStyle($assets . "/" . $f);
     }
-    return true;
+    return $main_app;
 }
 
 /**
@@ -85,10 +127,12 @@ function vue3_bind_manifest($doc, $assets)
  * @param ?array|string|JSExpression data options definition or JExpression data
  * @return igk\js\Vue3\Components\VueApplicationNode 
  */
-function igk_html_node_vue_app(string $id, $data = null)
+function igk_html_node_vue_app(?string $id='app', $data = null)
 {
     $n = new VueApplicationNode();
-    $n->setAttribute('id', $id);
+    if ($id){
+        $n->setAttribute('id', $id);
+    }
     if ($data) {
         if (is_string($data)) {
             $data = trim($data);

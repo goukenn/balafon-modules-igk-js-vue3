@@ -11,6 +11,15 @@ use IGKObject;
 
 abstract class VueLibraryBase extends IGKObject implements IRefLibrary{
     const VUE = 'vue';
+    protected $m_libraries = [];
+
+       /**
+     * 
+     * @return array 
+     */
+    public function getLibraries(){
+        return $this->m_libraries;
+    }
     /**
      * define name of this library
      * @var mixed

@@ -42,14 +42,14 @@ class CompileVueCommand extends VueCommandBase
 
     var $distName = 'dist';
 
-    var $desc = 'compile .vue to balafon entries. use npm as default package manager';
+    var $desc = 'compile .vue as single start project with webpack. use (npm) as default package manager';
     var $options = [
         "--manager:[name]" => "set default package manager. value can be npm or yarn",
         "--title:[title]" => "set document title",
         "--entry-config:[name]" => "set entry configuration. default is igk.js.vue3.configs",
         "--output:[dir]"=>"set ouput directory",
-        "--dependOn:[dir]"=>"set ouput directory",
-        "--devDependOn:[dir]"=>"set ouput directory",
+        "--dependOn:[packagelist]"=>"set package list",
+        "--devDependOn:[packagelist]"=>"set package list",
     ];
     public function showUsage()
     {
@@ -111,7 +111,6 @@ class CompileVueCommand extends VueCommandBase
       
             };
         }
-
         $data["public/index.html"] = function ($f) use ($command) {
             $title = igk_getv($command->options, "--title", "CompileVueCommand");
             $html5 = new Html5Document;
@@ -123,7 +122,7 @@ class CompileVueCommand extends VueCommandBase
             $html5->getBody()->div()->setAttributes(["id" => "app"]);
             igk_io_w2file($f, $html5->render());
         };
-        #region // for vite configuriont 2023
+        #region // for vite configurion 2023
         $data["index.html"] = function ($f) use ($command, $file) {
             $title = igk_getv($command->options, "--title", "Vite App");
             $html5 = new Html5Document;
@@ -150,13 +149,11 @@ class CompileVueCommand extends VueCommandBase
         };
         #endregion
 
-
-
         $data["public/favicon.ico"] = function ($f) use ($command) {
             self::_buildFavicon($f, $command);
         };
         $main = igk_io_basenamewithoutext($file);
-        $data["src/{$main}.js"] = function ($f) use ($file, $command) {
+        $data["src/main.js"] = function ($f) use ($file, $command) {
             $entry = igk_getv($command->options, "--entry-config", "igk.js.vue3.configs");
             $target = igk_getv($command->options, "--target", "#app");
             $sb = new StringBuilder;
@@ -178,14 +175,10 @@ class CompileVueCommand extends VueCommandBase
             }
             igk_io_w2file($f, $sb);
         };
-
-
-
         $data["webpack.config.js"] = function ($f) use (&$cfile) {
             $g = new WebpackManifestInfo();
             $g->mode = "production";
             $g->entry = $cfile;
-
             $rule = new WebpackManifestRule();
             $rule->test = JSExpression::CreateRegex('/\.vue$/i');
             $rule->use = ['vue-loader'];
@@ -251,9 +244,12 @@ class CompileVueCommand extends VueCommandBase
             Logger::print($npm_i);
         }
         Logger::info("run webpack ...");
-        $result = `webpack --config $cnf_file 2>&2`;
+        $result = `webpack --config $cnf_file 1>&2 2>&2 && echo done;`;
         echo "result : \n" . $result;
-        Logger::print($pwd);
+        if (trim($result)=='done'){
+            Logger::success("Done");
+            Logger::print($pwd);
+        }
     }
 
     private static function _buildFavicon(string $f)

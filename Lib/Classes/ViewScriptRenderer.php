@@ -5,6 +5,7 @@ namespace igk\js\Vue3;
 igk_require_module(\igk\js\common::class);
 
 use igk\js\common\JSExpression;
+use igk\js\Vue3\Libraries\VueLibraryBase;
 use IGK\System\Console\Logger;
 use IGK\System\Exceptions\ArgumentTypeNotValidException;
 use IGK\System\Html\HtmlRendererOptions;
@@ -63,7 +64,19 @@ class ViewScriptRenderer
         $std = new stdClass();
         $std->vueLib = [];
         foreach ($data as $k => $v) {
-            if (is_numeric($k) || (strtolower($k) == "vue")) {
+            if (empty($k) || is_numeric($k) || (strtolower($k) == "vue")) {
+                if ($v instanceof VueLibraryBase){
+                    $lib = $v->getLibraries();
+                    if ($vulib = igk_getv($lib,'Vue')){
+                        array_push($std->vueLib, ...array_keys($vulib));
+                        unset($lib['Vue']);
+                    }
+                    while(count($lib)>0){
+                        $m = array_unshift($lib);
+                    } 
+                    $std->$k=$v; 
+                    continue;
+                }
                 // global vue 
                 if (is_array($v)) {
                     array_push($std->vueLib, ...$v);
@@ -111,7 +124,7 @@ class ViewScriptRenderer
                 $options->{VueConstants::LIB_OPTIONS} = &$liboption;
             }
         }
-
+   
         // + | import library rendering
         foreach ($_vdata as $k => $v) {
             if (!is_null($s = $v->render($options))) {
@@ -131,7 +144,7 @@ class ViewScriptRenderer
                 $v_header_sb->appendLine('const { ' . implode(", ", $v->to_array()) . ' } = ' . $k . ';');
             }
         }
-
+  
 
         if (!is_null($this->def)) {
             $v_header_sb->appendLine("\n" . trim($this->def) . "\n");
@@ -140,11 +153,20 @@ class ViewScriptRenderer
         $app_name = $this->m_name;
         if ($app_name) {
             $sb->append("const {$this->m_name} = ");
-        }
-        // $sb->append("createApp(");
-        $sb->appendLine('igk.js.vue3.mainApp(createApp');
+        }        
+        $mode = 1;
         $l = JSExpression::Stringify($this->m_data, $js_options);
-        if (!empty($l))
+        // igk_wln_e("use..... ", $use, $this->m_libraries, $v_uses);
+        // mode 0
+        if (!$mode){ 
+            // + | default mode
+            $sb->append("createApp(");
+        }
+        else {
+            // + | injection mode
+            $sb->appendLine('igk.js.vue3.createApp(createApp');
+        }
+        if ($mode && !empty($l))
             $l =','.$l;
         $sb->append($l);
         $components = $this->m_components ?? [];

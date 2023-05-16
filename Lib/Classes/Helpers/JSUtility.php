@@ -16,7 +16,7 @@ abstract class JSUtility{
      * @param string $expression 
      * @return string 
      */
-    public static function TreatExpression(string $expression)
+    public static function TreatExpression(string $expression, array $vars = [])
     { 
         $exp = '';
         $filtering = false;
@@ -55,7 +55,9 @@ abstract class JSUtility{
                 }
                 if ($token == JSTokenReader::TOKEN_WORD) {
                     if (!$ref) {
-                        $exp .= 'this.';
+                        if (!in_array($value, $vars)){
+                            $exp .= 'this.';
+                        }
                         $ref = 1;
                     }
                 }
