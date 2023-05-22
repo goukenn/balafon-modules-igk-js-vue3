@@ -13,6 +13,7 @@ use IGKException;
  * @package igk\js\Vue3\Components 
  * */
 class VueComponent extends HtmlNode implements IHtmlContextContainer{
+  
     /**
      * get component loading context 
      * @return ?HtmlLoadingContext  

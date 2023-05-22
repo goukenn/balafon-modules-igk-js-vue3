@@ -37,6 +37,7 @@ class VueConstants{
 
     const VUE_COMPONENT_TEXT = 'Text';
     const VUE_COMPONENT_TRANSITION = 'Transition'; 
+    const VUE_COMPONENT_COMMENT = 'Comment'; 
 
     // const VUE_BUILDIN_COMPONENT = 'KeepAlive|Slot|Text|Teleport|Transition|TransitionGroup|Component|Template';
     const VUE_BUILDIN_COMPONENT = 'KeepAlive|Text|Teleport|Transition|TransitionGroup|Component|Template';

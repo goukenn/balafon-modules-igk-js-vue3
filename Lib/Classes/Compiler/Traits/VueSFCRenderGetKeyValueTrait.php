@@ -20,6 +20,9 @@ use ReflectionException;
 * @package igk\js\Vue3\Compiler\Traits
 */
 trait VueSFCRenderGetKeyValueTrait{
+    protected $interpolateStart = '{{';
+    protected $interpolateEnd = '}}';
+    
     protected static function _GetKey(string $k){        
         if (JSExpressionUtility::IsValidKey($k)){
             return $k;
@@ -36,7 +39,7 @@ trait VueSFCRenderGetKeyValueTrait{
      * @throws ArgumentTypeNotValidException 
      * @throws ReflectionException 
      */
-    protected static function _GetValue($v, $options=null, $preserve=false):?string{
+    protected static function _GetValue($v, $options=null, $preserve=false, $start='{{', $end='}}'):?string{
         if (is_null($v)){
             return null;
         }
@@ -48,10 +51,11 @@ trait VueSFCRenderGetKeyValueTrait{
         if (is_numeric($v)){
             return $v;
         }
-        if (!$preserve && preg_match("/{/",$v)){
+        $v = $v.'';
+        if (!$preserve && preg_match("/".$start."/",$v)){
             // is mustache replace with ${}express
             $args = $options && $options->contextVars  ? $options->contextVars[0] : [];
-            $v = VueSFCUtility::InterpolateValue($v, '{{', '}}', $preserve, $args);          
+            $v = VueSFCUtility::InterpolateValue($v, $start,  $end, $preserve, $args);          
             return igk_str_surround(trim($v, '`'),"`");
         }
         if (strpos($v,"'")!==false){          

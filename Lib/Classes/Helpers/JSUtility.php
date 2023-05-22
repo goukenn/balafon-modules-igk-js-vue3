@@ -27,6 +27,7 @@ abstract class JSUtility{
          * @var ?StringBuilder
          */
         $rkey = null;
+        $depth = 0;
 
         while (count($tags) > 0) {
             $ref = 0;
@@ -39,6 +40,8 @@ abstract class JSUtility{
             $tag = JSTokenReader::GetAllToken($expression);
             foreach ($tag as $e) {
                 list($token, $value) = $e;
+                if ($depth===0){
+                     
                 if ($value == 'this') {
                     $ref = 1;
                 }
@@ -64,6 +67,20 @@ abstract class JSUtility{
                 if (($token == JSTokenReader::TOKEN_BRACKET_END) || ($token == JSTokenReader::TOKEN_BRACKET_START)) {
                     $ref = 0;
                 }
+            } 
+            switch($value){
+                case '{':
+                case '(':
+                case '[':
+                    $depth++;
+                    break;
+                case '}':
+                case ']':
+                case ')':
+                    $depth--;
+                    break;
+            }
+
                 $exp .= $value;
             }
             if (count($tags) > 0) {

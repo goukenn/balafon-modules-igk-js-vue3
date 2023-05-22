@@ -16,9 +16,7 @@
          * @param {*} app application component not initialize
          * @param {*} options 
          */
-        initAppFromLib(app, options){
-            // const { h  } = Vue; // this can't create a vue from builded vite-project component
-            // const { /*createRouter ,*/ createWebHistory} = VueRouter; // require lib create router because of missing vue.inject(...) in lib  
+        initAppFromLib(app, options){ 
             const { createApp, /* createWebHistory */} = options.lib;             
             _vite.initApp(createApp(app), options).mount(options.target);
         }

@@ -59,6 +59,7 @@ trait VueSFCRenderTreatSpecialTagTrait{
                 $def= trim($rs);
             } 
         }
+        // + | append slot conditional with null
         $s->append(sprintf('slots.%s?slots.%s(%s):%s', $n, $n, $a, $def ?? 'null'));         
         return $s.'';
     }

@@ -30,11 +30,11 @@ class VueGenerateRenderJSMethodWithConditionTest extends ModuleBaseTestCase
         $d->load("<div v-if='x > 50.5'>hello </div><div v-else>else <b>what</b></div>");
 
         $this->assertEquals(
-            "render(){const{h}=Vue;return h('div',[this.x>50.5?h('div','hello '):h('div',{innerHTML:'else '},[h('b','what')])])}",
+            "render(){const{h,Text}=Vue;return h('div',[this.x>50.5?h('div','hello '):h('div',[h(Text,'else '),h('b','what')])])}",
             VueSFCCompiler::ConvertToVueRenderMethod($d)
         );
     }
-    public function test_render_else_2()
+    public function test_render_melse_2()
     {
         $d = new VueComponent('div');
         $d->load("<div v-if='x > 50.5'>hello </div><div v-else>else what</div><span>Jumping</span>");

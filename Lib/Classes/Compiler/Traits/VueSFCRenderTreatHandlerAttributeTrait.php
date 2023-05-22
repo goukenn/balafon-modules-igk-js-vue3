@@ -40,7 +40,7 @@ trait VueSFCRenderTreatHandlerAttributeTrait{
         }
         if ($preserve) {
             $self = $this;
-            $attrs['innerHTML']  = $content;
+            $this->updateInnerHTML($attrs, $content); 
             $data = ArrayMapKeyValue::Map(function ($k, $v) use ($self) {
                 return $self->LeaveAttribute($k, $v);
             }, $attrs);
@@ -50,13 +50,14 @@ trait VueSFCRenderTreatHandlerAttributeTrait{
             $data = $c->encode($data);
             $s->append($ch . sprintf('{%s}', $data));
             $content='';
+            $ch = ',';
         } else {
             if (key_exists($ck = 'v-html', $attrs)) {
                 $skip = true;
                 $content = igk_getv($attrs, $ck);
                 unset($attrs[$ck]);
                 if (empty(igk_getv($attrs,'innerHTML')) && self::DetectHtmlSupport($content) ){
-                    $attrs['innerHTML'] = $content;
+                    $this->updateInnerHTML($attrs, $content);
                     $content = '';
                 }
             }
@@ -90,5 +91,8 @@ trait VueSFCRenderTreatHandlerAttributeTrait{
                 }
             }
         }
+    }
+    protected function updateInnerHTML(& $attrs , $content){
+        $attrs['innerHTML'] = $content;
     }
 }

@@ -278,10 +278,8 @@ class VueRouter extends VueLibraryBase
         } else {
             $sb->appendLine("const {Text, h} = Vue;");
         }
-        // $sb->appendLine("const { createRouter, {$t}{$v_extra} } = VueRouter;");
         // + | function argument to use
         $v_targs = "{ createRouter,{$lib_n}{$t}{$v_extra} }";
-        // $sb->appendLine("const { createRouter, {$t}{$v_extra} } = igk.js.vue3.vite.lib;");
         $ref_cp = 0;
         $ref_ca = 0;
         $rs = [];
@@ -328,8 +326,20 @@ class VueRouter extends VueLibraryBase
                         // ignore script and style tag...
                         $options = HtmlRenderer::CreateRenderOptions();
                         $options->skipTags = ["style", "script"];
-                        $v_tcx = HtmlRenderer::Render($c, $options);
-                        $data["template"] = self::evalJSString($v_tcx);
+                        // $v_tcx = HtmlRenderer::Render($c, $options);
+                        // $data["template"] = self::evalJSString($v_tcx);
+
+                        //+ transform to component
+                        $component = VueSFCCompiler::ConvertToVueRenderMethod($c, $options);
+                        unset($data['template']);
+                        if ($data){
+                            // merge extra options data 
+                            if ($s = trim(implode(', ', $data))){
+                                $component .= ','.$s;
+                            }
+                        }
+                        $tdata["component"] = JSExpression::Litteral(sprintf('{%s}', $component));
+
                     } else if (is_array($data) && isset($data["component"])) {
                         $tdata["component"] = $data["component"];
                     } else {

@@ -97,9 +97,9 @@ class SFCScriptSetup
                 case $jsreader::TOKEN_WORD:
                     // if not follow this
                     if (!$follow){
-                        $cv = 'this.'.$cv;                        
+                        $cv = 'this.'.$cv;  
+                        $follow= true;                      
                     }
-                    $follow = false;
                     break;
                 }
             }

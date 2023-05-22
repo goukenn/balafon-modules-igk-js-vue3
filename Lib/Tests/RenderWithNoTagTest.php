@@ -19,7 +19,7 @@ class RenderWithNoTagTest extends ModuleBaseTestCase
 
         $t = new VueNoTagNode;
         $builder = new HtmlNodeBuilder($t);
-        $builder($b);
+        $builder($b); 
         $src = VueSFCCompiler::ConvertToVueRenderMethod($t);
         return $src;
     }
@@ -41,7 +41,7 @@ class RenderWithNoTagTest extends ModuleBaseTestCase
             'div.global'=>'litteral'
         ]);
         $this->assertEquals(
-            "render(){const{h}=Vue;return h('div',[h('div',{class:'header',innerHTML:'header'}),h('div',{class:'footer',innerHTML:'footer'})]),h('div',{class:'global',innerHTML:'litteral'})}",
+            "render(){const{h}=Vue;return [h('div',[h('div',{class:'header',innerHTML:'header'}),h('div',{class:'footer',innerHTML:'footer'})]),h('div',{class:'global',innerHTML:'litteral'})]}",
              $g);
     }
     public function test_render_with_conditional()
@@ -106,23 +106,23 @@ class RenderWithNoTagTest extends ModuleBaseTestCase
             ]
         ]);
         $this->assertEquals(
-            "render(){const{h,Text}=Vue;return h('div',[h(Text,'tracking details')]),h('form',{method:'POST',action:'.',class:'igk-form'},[h('div',{class:'content'})])}",
+            "render(){const{h,Text}=Vue;return [h('div',[h(Text,'tracking details')]),h('form',{method:'POST',action:'.',class:'igk-form'},[h('div',{class:'content'})])]}",
             $g
         );
     }
     public function test_render_complex_form()
     {
-        $g = $this->_runBuilder([
+        $g = $this->_runBuilder([ 
             "form" => [
-                "::fields" => [
-                    [
-                        "d" => ['type' => 'password']
-                    ]
+                "fields"=>[
+                    '@'=>[[
+                        "d" => ['type' => 'password', 'attribs'=>['autocomplete'=>'off']]
+                    ]]
                 ]
             ]
-        ]);
+        ]); 
         $this->assertEquals(
-            "render(){const{h}=Vue;return h('form',{method:'POST',action:'.',class:'igk-form'},[h('div',{class:'content'},[h('div',{class:'igk-form-group password'},[h('label',{for:'d',class:'igk-form-label',innerHTML:'D'}),h('input',{class:'igk-form-control password',id:'d',name:'d',placeholder:'d',type:'password'})])])])}",
+            "render(){const{h}=Vue;return h('form',{method:'POST',action:'.',class:'igk-form'},[h('div',{class:'content'},[h('div',{class:'igk-form-group password'},[h('label',{for:'d',class:'igk-form-label',innerHTML:'D'}),h('input',{autocomplete:'off',class:'igk-form-control password',id:'d',name:'d',placeholder:'d',type:'password'})])])])}",
             $g
         );
     }
@@ -173,8 +173,6 @@ class RenderWithNoTagTest extends ModuleBaseTestCase
     {
         $g = $this->_runBuilder([           
             "d > div" => [
-                // "b" => '{{ this.name }}',
-                // "c" => "tracking details",
                 "panelbox#response" => [
                     "_" => [
                         "v-if" => "response"
@@ -184,6 +182,42 @@ class RenderWithNoTagTest extends ModuleBaseTestCase
         ]);
         $this->assertEquals(
             "render(){const{h}=Vue;return h('d',[h('div',[this.response?h('div',{class:'igk-panel-box',id:'response'}):null])])}",
+            $g
+        );
+    }
+
+    public function test_loop_items(){
+        $g = $this->_runBuilder([           
+            "ul" => [ 
+                "li"=>[
+                    "vFor"=>[
+                        '@'=>"item of items"
+                    ],
+                    'Render Item : {{ item }}'
+                ]
+            ] 
+        ]);
+        $this->assertEquals(
+            "render(){const{h,Text}=Vue;return h('ul',[(function(l,key){for(key in l){((item)=>this.push(h('li',[h(Text,`Render Item : \${item}`)])))(l[key])}return this}).apply([],[this.items])])}",  
+            $g
+        );
+    }
+
+    public function test_loop_surround_items(){
+        $g = $this->_runBuilder([           
+            "ul" => [ 
+                "li.first"=>"First Item",
+                "li"=>[
+                    "vFor"=>[
+                        '@'=>"item of items"
+                    ],
+                    'Render Item : {{ item }}'
+                ],
+                "li.last"=>"Last Items"
+            ] 
+        ]);
+        $this->assertEquals(
+            "render(){const{h,Text}=Vue;return h('ul',[h('li',{class:'first',innerHTML:'First Item'}),(function(l,key){for(key in l){((item)=>this.push(h('li',[h(Text,`Render Item : \${item}`)])))(l[key])}return this}).apply([],[this.items]),h('li',{class:'last',innerHTML:'Last Items'})])}",  
             $g
         );
     }
