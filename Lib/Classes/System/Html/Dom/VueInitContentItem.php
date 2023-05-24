@@ -15,6 +15,12 @@ use IGK\System\Html\Dom\HtmlNode;
 class VueInitContentItem extends HtmlNode{
     var $tagname = 'script';
     
+    protected function initialize()
+    {
+        parent::initialize();
+        $this['type']='text/javascript';
+        $this['language'] = "javascript";
+    }
     public function getContent(){
         return '(function(){igk.system.createNS("'.
             VueConstants::CORE_JS_NAMESPACE

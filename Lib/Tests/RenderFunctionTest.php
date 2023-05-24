@@ -30,6 +30,22 @@ HTML
         $this->assertEquals("render(){const{Comment,h}=Vue;return h('div',[h('div',' item '),h(Comment,' first comment '),h('span','OK')])}", $s);
     }
 
+    public function test_render_after_sub(){
+        $d = new VueComponent("div");
+        $d->load(<<<'HTML'
+<div  v-if="item">
+    <h4 v-if="!a"> S </h4>
+    <div>
+        <p to="/proposal"> Proposer une voiture </p>
+    </div>
+</div>
+HTML);
+$s = VueSFCCompiler::ConvertToVueRenderMethod($d);
+        $this->assertEquals("render(){const{h}=Vue;return h('div',[this.item?h('div',[!this.a?h('h4',' S '):null,h('div',[h('p',{to:'/proposal',innerHTML:' Proposer une voiture '})])]):null])}",
+        $s);
+
+    }
+
     public function test_running_if_condition()
     {
         $d = new VueComponent("div");
@@ -102,14 +118,14 @@ HTML
         $d->load(
             <<<'HTML'
 <div v-if="a || b">
-    <h4 v-if="a">Carburant <span>m</span></h4>
-    <h4 v-if="b">Cylindrée <span>info</span></h4> 
+    <h4 v-if="a">one <span>m</span></h4>
+    <h4 v-if="b">two <span>x</span></h4> 
 </div>
 HTML
         );
         $s = VueSFCCompiler::ConvertToVueRenderMethod($d);
         $this->assertEquals(
-            "render(){const{h,Text}=Vue;return h('div',[this.a||this.b?h('div',[this.a?h('h4','Carburant '):null,this.car.cylindrical?h('h4','Cylindrée '):null,this.car.transmissionId?h('h4','Boite '):null]):null])}",
+            "render(){const{h,Text}=Vue;return h('div',[this.a || this.b?h('div',[this.a?h('h4',[h(Text,'one '),h('span','m')]):null,this.b?h('h4',[h(Text,'two '),h('span','x')]):null]):null])}",
             $s
         );
     }
@@ -142,18 +158,15 @@ HTML
     public function test_running_if_else_condition_block_inner_dl()
     {
         $d = new VueComponent("div");
-        $d->load(
-            <<<'HTML'
-<div class='topdiv' >
-    <h4 v-if="a">A</h4>
-    <h4 v-if="b">B</h4>
-    <h4 v-else>C</h4>
-</div>
-HTML
-        );
+        $d['class'] = 'topdiv';
+        $d->load(<<<'HTML'
+<h4 v-if="a">A</h4>
+<h4 v-if="b">B</h4>
+<h4 v-else>C</h4> 
+HTML);
         $s = VueSFCCompiler::ConvertToVueRenderMethod($d);
         $this->assertEquals(
-            "render(){const{h}=Vue;return h('div',[h('div',{class:'topdiv'},[this.a?h('h4','A'):null,this.b?h('h4','B'):h('h4','C')])])}",
+            "render(){const{h}=Vue;return h('div',{class:'topdiv'},[this.a?h('h4','A'):null,this.b?h('h4','B'):h('h4','C')])}",
             $s
         );
     }
@@ -174,6 +187,137 @@ HTML
         $this->assertEquals(
             "render(){const{h,Text}=Vue;return h('div',[h('div',{class:'topdiv'},[this.a?h('h4','A'):null,h('span','info'),h(Text,' '),this.b?h('h4','B'):h('h4','C')])])}",
             $s
+        );
+    }
+    public function test_leave_interpolation()
+    {
+        $d = new VueComponent("div");
+        $d->load(
+            <<<'HTML'
+  <h2> '{{$t('Show room')}} </h2>
+HTML
+     ,[]);
+        $s = VueSFCCompiler::ConvertToVueRenderMethod($d);
+        $this->assertEquals(
+            "render(){const{h}=Vue;return h('div',[h('h2',` \${this.\$t('Show room')} `)])}",
+            $s
+        );
+    }
+    public function test_cn_condition()
+    {
+        $d = new VueComponent("div");
+        $d->load(
+            <<<'HTML'
+  <h2 v-if="car.pictures && (car.pictures.length>0)"> data </h2>
+HTML
+     ,[]);
+        $s = VueSFCCompiler::ConvertToVueRenderMethod($d);
+        $this->assertEquals(
+            "render(){const{h}=Vue;return h('div',[this.car.pictures && (car.pictures.length>0)?h('h2',' data '):null])}",
+            $s
+        );
+    }
+    public function test_cn_after_condition()
+    {
+        $d = new VueComponent("div");
+        $d->load(
+            <<<'HTML'
+  <div v-if="x">
+</div>
+<div v-if="a || b || c">   
+<div class="event_news_text">
+    <h4 v-if="a">A: </h4>
+    <h4 v-if="b">B: </h4>
+    <h4 v-if="c">C:</h4>
+</div>
+</div>
+HTML
+     ,[]);
+        $s = VueSFCCompiler::ConvertToVueRenderMethod($d);
+        $this->assertEquals(
+            "render(){const{h}=Vue;return h('div',[this.x?h('div'):null,this.a || this.b || this.c?h('div',[h('div',{class:'event_news_text'},[this.a?h('h4','A: '):null,this.b?h('h4','B: '):null,this.c?h('h4','C:'):null])]):null])}",
+            $s
+        );
+    }
+
+
+    public function test_skip_script_after_condition()
+    {
+        $d = new VueComponent("div");
+        $d->load(
+            <<<'HTML'
+  <div v-if="x">
+</div>
+    <script></script>
+    <div>after </div>
+</div>
+</div>
+HTML
+     ,[]);
+        $s = VueSFCCompiler::ConvertToVueRenderMethod($d);
+        $this->assertEquals(
+            "render(){const{h}=Vue;return h('div',[this.x?h('div'):null,h('div','after ')])}",
+            $s
+        );
+    }
+
+    public function test_convert_template()
+    {
+        $d = new VueComponent("div");
+        $d->load(
+            <<<'HTML'
+  <div v-if="x">
+</div>
+    <script></script>
+    <template v-if="ok"> <div>after </div> </template>
+    <div>base. </div>
+</div>
+</div>
+HTML
+     ,[]);
+        $s = VueSFCCompiler::ConvertToVueRenderMethod($d);
+        $this->assertEquals(
+            "render(){const{h}=Vue;return h('div',[this.x?h('div'):null,this.ok?h('div','after '):null,h('div','base. ')])}",
+            $s,
+            "transform template to inline rendering failed."
+        );
+    }
+
+//     public function test_convert_template_with_else_block()
+//     {
+//         $d = new VueComponent("div");
+//         $d->load(
+//             <<<'HTML'
+//   <div v-if="x">
+// </div>
+//     <script></script>
+//     <template v-if="ok"> <div>after </div> </template>
+//     <template v-else>else...</template>
+// </div>
+// </div>
+// HTML
+//      ,[]);
+//         $s = VueSFCCompiler::ConvertToVueRenderMethod($d);
+//         $this->assertEquals(
+//             "render(){const{h}=Vue;return h('div',[this.x?h('div'):null,this.ok?h('div','after '):null,h('div','base. ')])}",
+//             $s,
+//             "transform template to inline rendering failed."
+//         );
+//     }
+
+    public function test_pre_attribute_fix()
+    {
+        $d = new VueComponent("div"); 
+        $d->load(
+            <<<'HTML'
+  <div v-if="x" v-pre/> 
+HTML
+     ,[]);
+        $s = VueSFCCompiler::ConvertToVueRenderMethod($d);
+        $this->assertEquals(
+            "render(){const{h}=Vue;return h('div',[h('div',{'v-if':'x',innerHTML:''})])}",
+            $s,
+            "reserve transformation on div"
         );
     }
 }

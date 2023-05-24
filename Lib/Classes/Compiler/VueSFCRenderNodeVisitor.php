@@ -14,6 +14,8 @@ use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatBindingAttributeTraitTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatDirectiveAttributeTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatEventAttributeTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatSpecialTagTrait;
+use igk\js\Vue3\Components\VueComponent;
+use igk\js\Vue3\Components\VueNoTagNode;
 use igk\js\Vue3\Helpers\JSUtility;
 use igk\js\Vue3\System\Html\Dom\VueSFCTemplate;
 use igk\js\Vue3\VueConstants;
@@ -22,13 +24,17 @@ use IGK\System\Exceptions\ArgumentTypeNotValidException;
 use IGK\System\Html\Dom\HtmlCommentNode;
 use IGK\System\Html\Dom\HtmlHostChildren;
 use IGK\System\Html\Dom\HtmlItemBase;
+use IGK\System\Html\Dom\HtmlNode;
 use IGK\System\Html\Dom\HtmlNoTagNode;
 use IGK\System\Html\Dom\HtmlTextNode;
 use IGK\System\Html\HtmlVisitor;
 use IGK\System\IO\Configuration\ConfigurationEncoder;
 use IGK\System\IO\StringBuilder;
 use IGKException;
-use ReflectionException;
+use ReflectionException; 
+
+igk_require_module(\igk\js\Vue3::class);
+
 
 ///<summary></summary>
 /**
@@ -70,11 +76,13 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     private $m_start_render = false; // flag to detect node start render for array detection
     private $m_globalStart_Array = false; // flag to detect global array start;
     private $m_globalChildCounter = 0; // counting global childs;
-    private $m_globalDepth;
+    private $m_globalDepth = 0;
 
     private $m_child_state = [];
 
     private $m_last_text = null;
+
+    
 
     /**
      * request extra arguments for render function (props, /[{}]/);
@@ -141,9 +149,8 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             $args = sprintf('props, {%s}', implode(",", array_keys($visitor->requestArgs)));
         }
 
-        if ($visitor->m_conditional_group) {
-            $visitor->endConditional(true);
-            igk_ilog('warn end global conditional');
+        if ($visitor->m_conditional_group) { 
+            igk_environment()->isDev() && igk_die('warn : conditial group is not empty');
         }
         if (!empty($res = $visitor->m_sb . '')) {
             $res = 'return ' . $res;
@@ -178,8 +185,16 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     private function _updateGlobalChildCounter()
     {
         if ($this->m_globalStart_Array) {
-            if ($this->m_globalDepth == 0) {
+            if ($this->m_globalDepth <= 1) { // contional skip
                 $this->m_globalChildCounter++;
+            }
+        }
+    }
+
+    protected function _downgradeGlobalChildCount(){ 
+        if ($this->m_globalStart_Array){
+            if ($this->m_globalDepth <= 1) { // conditionnal skip 
+                $this->m_globalChildCounter--; 
             }
         }
     }
@@ -196,7 +211,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
      */
     protected function beginVisit(HtmlItemBase $t, bool $first_child, bool $has_childs, bool $last_child): ?bool
     {
-        igk_debug_wln('begin visit : ');
+        igk_debug_wln('begin visit : '. $t->getTagName());
         // + | debug counting
         //  $count = igk_env_count(__METHOD__);
 
@@ -232,11 +247,13 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 }
                 self::AddLib($this->m_options, VueConstants::VUE_COMPONENT_TEXT);
                 $this->m_last_text = $content;
-                $this->m_sb->append($tch . VueConstants::VUE_METHOD_RENDER . self::getTextDefinition($content, null, $this->preserveContent()));
+                $this->m_sb->append($tch . VueConstants::VUE_METHOD_RENDER . self::getTextDefinition($content, null, $this->_preserveContent()));
                 $this->skip = true;
                 $this->skip_end = true;
-                if ($this->m_child_state)
+                if ($this->m_child_state){ 
                     $this->m_child_state[0]->sep = ',';
+                    $this->m_child_state[0]->has_childs = true;
+                }
                 $this->_update_conditionLevel();
                 return true;
             }
@@ -245,6 +262,9 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         if ($t instanceof HtmlCommentNode) {
             self::AddLib($this->m_options, VueConstants::VUE_COMPONENT_COMMENT);
             $v_tc = self::_GetValue($content, null, true);
+            if (strpos($v_tc,"\n")!==false){
+                $v_tc = igk_str_surround(stripslashes($v_tc),'`');
+            }
             $this->m_sb->append($tch . VueConstants::VUE_METHOD_RENDER . sprintf(
                 '(%s,%s)',
                 VueConstants::VUE_COMPONENT_COMMENT,
@@ -265,6 +285,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         $v_directives = [];
         $v_skip = false;
         $v_start_child = false;
+        $manual_child  = null;
         if (empty($tagname) || !$canrender) {
             //  $this->m_sb->append($tch);
             $this->m_child_detect = $this->m_child_detect || $has_childs;
@@ -292,9 +313,49 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             return null;
         }
 
-
-
+        if (strtolower($tagname)=='script'){
+            $this->skip = true;
+            $this->skip_end = true;
+            return null;
+        }
         $attrs = $t->getAttributes()->to_array();
+
+        // TODO : MANAGE TEMPLATE transform to slot or explode to content .
+        if (0 && strtolower($tagname)=='template'){
+            // igk_wln_e("found template.....");
+            // isset($attrs['v-else']) && 
+            igk_die('v-else not allowed supported in template');
+            if ($r = $this->m_conditional_group) {
+                if ($r[0][0]->depth >= $this->m_globalDepth) {
+                    // end conditional 
+                    $this->endConditional();
+                    $this->m_sb->append(",");
+                    $tch = '';
+                }
+            }
+            // special meaning in vue
+            $v_n = new VueComponent('dummy-template');
+            $childs = $t->getRenderedChilds();
+            $v_n->addRange($childs);
+            $v_n->setAttributes($t->getAttributes()->to_array());
+            // $v_n->Load($t->render());
+            $sf = new static($v_n);
+            $sf->m_options = $this->m_options;
+        
+            $sf->visit();
+            $this->m_last_text = $sf->m_last_text;
+            $content = $sf->m_sb.'';
+            $content = str_replace("h('dummy-template',[", '',$content);
+            $content = preg_replace("/\]\):null$/", ':null',$content);
+            $this->m_sb->append($tch .$content);
+            $this->skip = true;
+            $this->skip_end = true;
+            if ($this->m_child_state) {
+                $this->m_child_state[0]->sep = ',';
+            }
+            return null;
+        }
+ 
         // + | special tag meaning , slot - for example
         if ($this->isSpecialTagMeaning($tagname, $attrs)) {
 
@@ -318,7 +379,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                     if (!($this->m_start_render)) {
                         $s->append('[');
                         $this->m_globalStart_Array = true;
-                        $this->_startChildVisit();
+                        $this->_startChildVisit($t);
                     }
                 }
             }
@@ -332,17 +393,31 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         $this->m_start_render = true;
         if ($this->m_conditional_group) {
             // detect if need to stop;
-            $this->checkEndCondition($t, $attrs, $first_child, $last_child);
+            $this->_checkEndCondition($t, $attrs, $first_child, $last_child);
         }
 
         $this->_updateGlobalChildCounter();
         $s->append(VueConstants::VUE_METHOD_RENDER . "(");
         $this->m_func_depth++;
-        $v_info = $this->_pushState();
-        $v_info->start_child = $v_start_child;
+        $v_info = $this->_pushState(); 
         //treat special tag before rendering
         if ($this->isBuildInComponent($tagname)) {
             $s->append($this->resolveBuildInComponent($tagname, $attrs, $v_slot, $has_childs));
+            if (strtolower($tagname)=='teleport'){
+                if (!$has_childs && !empty($content)){
+                    $inner_content = $content;
+                    $content = '';                    
+                    $node = new VueNoTagNode;
+                    $node->load($inner_content);
+                    $mvisitor = new self($node);
+                    $mvisitor->m_options = $this->m_options;
+                    $mvisitor->visit();
+                    $info = $mvisitor->m_sb."";
+                    $manual_child = sprintf('[%s]',trim($info,'[]'));
+                }
+            }
+
+
         } else if ($this->isResolvableComponent($tagname)) {
             $s->append($this->resolveComponent($tagname, $attrs, $v_slot, $has_childs));
         } else {
@@ -414,13 +489,19 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             // if (!$v_start_child) {
             $s->append('[');
             $v_info->start_child = true;
-            $this->_startChildVisit();
+            $this->_startChildVisit($t);
             // }
             if ($inner_content) {
                 self::AddLib($this->m_options, VueConstants::VUE_COMPONENT_TEXT);
-                $s->append($tch . VueConstants::VUE_METHOD_RENDER . self::getTextDefinition($inner_content, null, $this->preserveContent()));
+                $s->append($tch . VueConstants::VUE_METHOD_RENDER . self::getTextDefinition($inner_content, null, $this->_preserveContent()));
                 $ch = ',';
                 $this->m_child_state[0]->sep = $ch;
+            }
+        }
+        else {
+            if ($manual_child){
+                $s->append($ch);
+                $s->append($manual_child);
             }
         }
         if ($v_conditional || $v_loop || $v_directives) {
@@ -451,19 +532,16 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         }
         return true;
     }
-    protected function _close($t, $v_info, $has_childs, bool $shift){
-        if ($this->m_preservelist && $shift) {
-            if ($this->m_preservelist[0] === $t) {
-                array_shift($this->m_preservelist);
-            }
-        }
+    protected function _close($t, $v_info, $has_childs, bool $shift)
+    {
+      
         $v_childs_container = (!$v_info || $v_info->start_child);
         if ($has_childs) {
             $this->m_sb->rtrim(',');
             if ($this->m_single_item || $v_childs_container) {
                 //if (!$v_info || $v_info->start_child) {
                 $this->m_sb->append("]");
-                if ($shift){
+                if ($shift) {
                     array_shift($this->m_child_state);
                 }
                 //     }
@@ -471,17 +549,28 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 //     $this->m_sb->append("]");
                 //     array_shift($this->m_child_state);
             }
-            $this->m_single_item = false;
-            if (!is_null($this->m_globalDepth)) {
-                // decrement global depth - for end
-                $this->m_globalDepth--;
-            }
+            $this->m_single_item = false;          
         }
+       $this->_closeFunction();
+    }
+    private function _closeFunction(){
         if ($this->m_func_depth) {
             $this->m_sb->append(")");
             $this->m_func_depth--;
         }
-
+    }
+    private function _closeArray($v_info){
+        if ($v_info && $v_info->start_child){
+            // close array childs 
+            $this->m_sb->append("]"); 
+        }
+    }
+    private function _closePreservation($t){
+        if ($this->m_preservelist) {
+            if ($this->m_preservelist[0] === $t) {
+                array_shift($this->m_preservelist);
+            }
+        }
     }
     /**
      * end visit
@@ -496,42 +585,117 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
      */
     protected function endVisit(HtmlItemBase $t, bool $has_childs, bool $last, bool $end_visit)
     {
-        igk_debug_wln('end visit::' . $this->m_globalDepth);
+        // igk_debug_wln('end visit::  ' . $this->m_globalDepth);
         $v_info = $this->_popState();
-        $close_array = $has_childs && $this->m_single_item || (!$v_info || $v_info->start_child);
+        // $close_array = $has_childs && $this->m_single_item || (!$v_info || $v_info->start_child);
         $closed = false;
+        if ($v_info && $v_info->start_child && !is_null($this->m_globalDepth)) {
+            // decrement global depth - for end
+            $this->m_globalDepth--;
+        }
+        $this->_closePreservation($t);
+
+        // condition group marker - 
+        // ------------------------
+        // merge all condiontinal with A?B:C?D:E
+        // v-if A v-else-if B v-else C
 
         // + | --------------------------------------------------------------------
         // + | preserved list stop render 
-        // + |   
-       
-        // + | pre condition end
-
-        if ($this->m_conditional_group) {
-            $cond_group = $this->m_conditional_group[0];
-            if ($end_visit || $close_array ||  ($cond_group[0]->depth > $this->m_globalDepth)) {
-                if ($this->m_conditionals) {
-                    // else conditional can't be marked 
-                   // $this->_endOrCreateConditionalGroup($t);
-                   $cond = $this->m_conditionals[0];
-                   if ($cond_group[0]->depth == $cond->depth){                       
-                        $this->_endOrCreateConditionalGroup($t);
-                   }
-                }
-               // $closed = true;
-                $this->_close($t, $v_info, $has_childs, false);   
-                $this->endConditional();
-               // $this->_close($t, $v_info, $has_childs, false);      
-                $this->m_sb->append('/* close */');
+        // + | 
+      
+        // every time with read a conditionals we must update the conditional list before closing the node 
+        if ($this->m_conditionals || $this->m_conditional_group){
+            $cond = null; 
+            // igk_debug_wln('end conditional.....');           
+            if ($this->m_conditionals){   
+                if ($this->m_conditional_group){
+                    if ($this->m_conditional_group[0][0]->depth > $this->m_globalDepth){ 
+                        $this->endConditional();
+                        // if ($v_info && $v_info->start_child){
+                        //     // close array childs 
+                        //     $this->m_sb->append("]"); 
+                        // }
+                    }
+                } 
+                $cond = $this->m_conditionals[0];
+                if ($cond->t === $t){
+                    $this->_closeArray($v_info);
+                    $this->_closeFunction();
+                    $this->_endOrCreateConditionalGroup($t);
+                   
+                } else {
+                    // $this->_closeFunction();                    
+                    // $this->_closeArray($v_info);
+                    $this->_closeArray($v_info);
+                    $this->_closeFunction();
+                } 
+            } else {
+                // $group = $this->m_conditional_group[0];  
+                $this->endConditional(); 
+                $this->_closeArray($v_info);
+                $this->_closeFunction();
             }
-        }
-        if ($this->m_conditionals) {
-            // mark or visit end condtion 
-            $this->_endOrCreateConditionalGroup($t);
-        }
-        if (!$closed)
-            $this->_close($t, $v_info, $has_childs, true);   
-       
+
+
+            // if($this->m_conditional_group && !$this->m_conditionals){
+            //     // no conditional next found . so end conditional 
+            //     $this->endConditional();
+            //     igk_dev_wln('no end found**************************************');
+            // } else if ($this->m_conditional_group && $this->m_conditionals){
+            //     if ($this->m_conditional_group[0][0]->group){
+            //         $this->endConditional();
+            //         igk_dev_wln("end first condition ..... ");
+            //     }
+
+            //     // check for new conditional start
+            //     $cond = $this->m_conditionals[0];
+            //     if ($cond->i =='v-if'){
+            //         $this->_endOrCreateConditionalGroup($t); 
+            //     }
+            // }
+            // if ($v_info && $v_info->start_child){
+            //     // close array childs 
+            //     $this->m_sb->append("]"); 
+            // }
+            // // close function list
+    
+            // // close function 
+            // if ($this->m_func_depth){
+            //     $this->m_sb->append(")"); 
+            //     $this->m_func_depth--;
+            // }
+            // if ($this->m_conditionals ){
+            //     $cond =  $this->m_conditionals[0];
+            //     $skip_conditions = true;
+            //     if($cond->depth > $this->m_globalDepth){
+            //         // force end condition 
+            //         igk_dev_wln('force end condition');
+            //     } else {
+            //         if ($cond->t === $t){
+            //             $this->_endOrCreateConditionalGroup($t);
+            //             $skip_conditions = false;
+            //         }
+            //     }
+            // }
+            // // wait for condition next marker
+            // if (!$skip_conditions && $this->m_conditional_group){ 
+            //     $group = $this->m_conditional_group[0];
+            //     if (($group[0]->group) || ($group[0]->i=='v-else')){ 
+            //         $this->endConditional();
+            //     } else {
+            //         $group[0]->group = true;
+            //         if ($cond && ($cond->i  == 'v-else')){
+            //             $this->endConditional();
+            //         }
+            //     }
+            // } 
+            $closed = true;
+        } 
+
+        !$closed && $this->_close($t, $v_info, $has_childs, true); 
+
+      
 
         if ($this->m_loop_group) {
             $g = $this->m_loop_group[0];
@@ -562,6 +726,10 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
 
 
         if ($end_visit) {
+           
+            if ($this->m_conditional_group){
+                $this->endConditional();
+            }
             if ($this->m_globalStart_Array || ($this->m_close_childs > 0)) {
                 $this->m_close_childs = 0;
                 $this->m_sb->append("]");
@@ -571,21 +739,37 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             }
         }
     }
-    private function _startChildVisit()
+    private function _startChildVisit(HtmlNode $t)
     {
         $s = false;
         if (is_null($this->m_globalDepth)) {
             $this->m_globalDepth = 0;
             $s = true;
         }
-        array_unshift($this->m_child_state, (object)['sep' => '', 'depth' => $this->m_globalDepth]);
+        // store child state in used
+        array_unshift($this->m_child_state, (object)[
+            'sep' => '', 
+            'depth' => $this->m_globalDepth,
+            'target'=>$t]);
         if (!$s) {
             $this->m_globalDepth++;
         }
     }
-    function checkEndCondition($t, $attr, $first_child, $last_child)
+    /**
+     * check end conditional
+     * @param mixed $t 
+     * @param mixed $attr 
+     * @param mixed $first_child 
+     * @param mixed $last_child 
+     * @return void 
+     * @throws IGKException 
+     * @throws ArgumentTypeNotValidException 
+     * @throws ReflectionException 
+     */
+    protected function _checkEndCondition($t, $attr, $first_child, $last_child)
     {
         if (!$this->isConditionnal($t, $attr, $first_child, $last_child, true)) {
+            // $this->_stopeEndConditionalGroup();
             if ($r = $this->m_conditional_group) {
                 if ($r[0][0]->depth >= $this->m_globalDepth) {
                     // end conditional 
@@ -618,16 +802,22 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 }
                 if ($c->i == 'v-else') {
                     // close conditional group
+               
+                    $this->_downgradeGlobalChildCount();
+
                     array_push($this->m_conditional_group[0], $c);
-                    $this->endConditional(false);
+                    $this->endConditional();
                 }
                 if ($c->i == 'v-if') {
                     // + | start conditional group                    
                     array_unshift($this->m_conditional_group, [$c]);
-                    // array_unshift($tcond, $c);
+                    $c->buffer = $this->m_sb.'';
                 } else {
                     if ($c->i == 'v-else-if') {
+                        $this->_downgradeGlobalChildCount();
+                        
                         array_push($this->m_conditional_group[0], $c);
+                        $this->m_conditional_group[0][0]->group = false;
                     }
                 }
             }
@@ -643,6 +833,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     }
     #endregion
 
+  
     protected static function _GetAttributeStringDefinition($node, $attrs, $content, $context, $options, &$directives, bool $preserve)
     {
         $s = '';
@@ -717,10 +908,10 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         }
         $r = $this->m_sb; // current string build 
         $cond = '';
+        $is_inloop = $this->_preserveContent(); 
 
         $sep = 0;
-        $else_block = null;
-        $g_is_root = null;
+        $else_block = null; 
 
         $stop = false;
         $baseDepth = $c[0]->depth;
@@ -729,30 +920,36 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
 
             $n_build = new StringBuilder();
             $else = 'null';
+            $lsep = '';
+            $sep = 0;
             while (count($c) > 0) {
-                $q = array_pop($c);
-                if (is_null($g_is_root)) {
-                    $g_is_root = $q->sb->isEmpty();
-                }
+                $q = array_pop($c);              
                 if ($q->i == 'v-else') {
                     $else = $r . ""; //self::_GetExpression($q->v,true);      
                     $else_block = $q;
                     $stop = true;
                 } else {
-                    $cond = self::_GetExpression($q->v, true);
+                    $cond = self::_GetExpression($q->v, !$is_inloop);
                     if (($q->first) && (($q->last) || ($else_block && $else_block->last))) {
                         // $q->sb->rtrim('[');
                         $this->m_single_item = true;
                     }
-                    $tr = $r . '';
+                    $tr = trim($r . '');
+                    $is_array = strpos($tr, '[') === 0; // start with array
                     $tr = trim($tr, '[],');
                     $express = $tr . '';
                     if ($q->childCount > 0) {
                         $express = '[' . $express . ']';
                     }
-                    $express = sprintf("%s%s%s?%s", '', $sep ? '' : '', $cond, $express); 
-                    $n_build->append($express); 
+                    $express = sprintf("%s%s%s?%s", '', $sep ? '' : '', $cond, $express);
+                    if ($is_array){
+                        $express = '['.$express;
+                    }
+                    // $n_build->append($express);
+                    $n_build->set($express. $lsep.$n_build);
                     $sep++;
+                    //$lsep = '/*:*/:(';
+                    $lsep = ':(';
                 }
                 //restore backg up
                 $r = $q->sb;
@@ -762,10 +959,13 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             if ($top) {
                 $m = sprintf("[%s:%s]", $n_build . '', $else);
             } else {
-                $m = sprintf("%s:%s%s", $n_build . '', $else, $sep > 1 ? ',' : '');
-                if ($g_is_root === true) {
-                    $m = '[' . $m;
-                }
+
+                $lf = str_repeat(')', $sep-1);
+
+                // $n_build->append(str_repeat(')', $sep-1));
+
+                $m = sprintf("%s:%s%s", $n_build . '', $else.$lf, $sep > 1 ? '' : '');
+                
             }
             array_unshift($conditions, $m);
             if ($this->m_conditional_group) {
@@ -781,13 +981,15 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 $stop = true;
             }
         }
-        $m = ltrim(implode('', $conditions), '(');
+        $m = ltrim(implode(',', $conditions), '(');
         if (count($this->m_conditional_group) == 0) {
             // $r->set($m);
             $r->append($m);
             $this->m_sb = $r;
         } else {
-            $this->m_sb->set($m);
+            $r->append($m);
+            $this->m_sb = $r;
+            //$this->m_sb->set($m);
         }
         //array_shift($this->m_conditional_group);
     }
@@ -814,6 +1016,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 $v = igk_getv($attr, $k);
                 unset($attr[$k]);
                 // + | add conditionals tag
+                igk_debug_wln("add conditional : ".$k." : ".$this->m_globalDepth);
                 array_unshift($this->m_conditionals, (object)[
                     'sb' => null, // stringbuilder
                     't' => $t,
@@ -825,7 +1028,8 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                     'ch' => '',
                     'depth' => $this->m_globalDepth,
                     'childCount' => 0,
-                    'group' => $groups
+                    'group' => $groups,
+                    'buffer' =>null
                 ]);
             }
         }
@@ -886,7 +1090,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         return sprintf('(%s,%s)', VueConstants::VUE_COMPONENT_TEXT, $v);
     }
 
-    private function preserveContent(): bool
+    private function _preserveContent(): bool
     {
         return count($this->m_loop_group) > 0;
     }
@@ -937,6 +1141,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         $op = $tab['op'];
         $mode = preg_match('/^\{.+\}$/', $tab['cond']) ? 1 : (preg_match('/^\(.+\)$/', $tab['cond']) ? 2 : 0);
         $exp = JSUtility::TreatExpression($tab['exp']);
+    
         switch ($mode) {
             case 1:
                 $firstkey = trim(explode(",", substr($cond, 1, -1))[0]);
@@ -946,8 +1151,9 @@ JS, $op, $cond, $content, $exp);
                 break;
             case 2:
                 $firstkey = trim(explode(",", substr($cond, 1, -1))[0]);
+                // + | push on array list items
                 $src = sprintf(
-                    '(function(l,key){for(key %s l){((%s)=>this.push(%s))(l[key])}return this}).apply([],[%s])',
+                    '(function(l,ctx,key){for(key %s l){((%s)=>this.push((function(){ return %s}).apply(ctx)))(l[key])}return this}).apply([],[%s, /*  context - contex=== */ this])',
                     $op,
                     $firstkey,
                     $content,

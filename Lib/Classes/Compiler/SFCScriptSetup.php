@@ -76,7 +76,8 @@ class SFCScriptSetup
      * @throws ArgumentTypeNotValidException 
      * @throws ReflectionException 
      */
-    public static function TransformToThisContext(string $src):string{
+    public static function TransformToThisContext(string $src): string
+    {
         $s = "";
         $jsreader = new JSScriptReader;
         $jsreader->src = $src;
@@ -88,22 +89,36 @@ class SFCScriptSetup
         while (!$end && $jsreader->read()) {
             $cv = $jsreader->value;
             if ($jsreader->depth == 0) {
-                switch($jsreader->type){
-                case $jsreader::TOKEN_RESERVED_WORD:
-                    if ($cv=="this"){
-                        $follow= true;
-                    }
-                    break;
-                case $jsreader::TOKEN_WORD:
-                    // if not follow this
-                    if (!$follow){
-                        $cv = 'this.'.$cv;  
-                        $follow= true;                      
-                    }
-                    break;
+                switch ($jsreader->type) {
+
+                    case $jsreader::TOKEN_RESERVED_WORD:
+                        if (!$follow){
+                            if ($cv == "this") {
+                                $follow = true;
+                            }
+                        }
+                        break;
+                    case $jsreader::TOKEN_WORD:
+                        // if not follow this
+                        if (!$follow) {
+                            $cv = 'this.' . $cv;
+                            $follow = true;
+                        }
+                        break;
+                    default:
+                        if ($follow) {
+                            if ($jsreader->type == $jsreader::TOKEN_OPERATOR ){
+                                $follow = $cv == '.';
+                            } else {
+                               // if ($jsreader->type == $jsreader::TOKEN_BRACKET){
+                                    $follow==false;
+                                //}
+                            }
+                        }
+                        break;
                 }
             }
-            $s.= $cv;
+            $s .= $cv;
         }
         return $s;
     }

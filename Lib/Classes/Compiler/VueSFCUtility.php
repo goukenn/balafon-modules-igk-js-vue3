@@ -22,8 +22,7 @@ abstract class VueSFCUtility{
      * @return string 
      */
     public static function InterpolateValue(string $v, string $start='{{', string $end='}}', bool $preserve=false, array $vars=[]){
-            $start = '{{';
-            $end = '}}';
+          
 
             $ln = strlen($v);
             $tp = 0;

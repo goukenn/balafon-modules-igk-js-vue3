@@ -152,7 +152,7 @@ class RenderWithNoTagTest extends ModuleBaseTestCase
             "div.i[v-if:resp]" => "AB",
         ]);
         $this->assertEquals(
-            "render(){const{h}=Vue;return [this.resp?h('div',{class:'i',innerHTML:'AB'}):null]}",
+            "render(){const{h}=Vue;return this.resp?h('div',{class:'i',innerHTML:'AB'}):null}",
             $g
         );
     }
@@ -176,12 +176,13 @@ class RenderWithNoTagTest extends ModuleBaseTestCase
                 "panelbox#response" => [
                     "_" => [
                         "v-if" => "response"
-                    ]
+                    ],
+                    "-i-"
                 ]
             ] 
         ]);
         $this->assertEquals(
-            "render(){const{h}=Vue;return h('d',[h('div',[this.response?h('div',{class:'igk-panel-box',id:'response'}):null])])}",
+            "render(){const{h,Text}=Vue;return h('d',[h('div',[this.response?h('div',{class:'igk-panel-box',id:'response'},[h(Text,'-i-')]):null])])}",
             $g
         );
     }

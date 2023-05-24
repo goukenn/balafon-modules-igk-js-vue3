@@ -59,6 +59,12 @@ class VueRouter extends VueLibraryBase
     var $options;
 
     /**
+     * use library template engine
+     * @var false
+     */
+    var $useTemplateEngine = false;
+
+    /**
      * retrieve store routes
      * @return mixed 
      */
@@ -286,6 +292,7 @@ class VueRouter extends VueLibraryBase
         $_voptions = (object)["objectNotation" => 1];
         $vue_import = [];
         $v_routes = $this->m_routes;
+        $v_libInUses = [];
         if ($v_routes)
             foreach ($v_routes as $path => $data) {
 
@@ -324,21 +331,38 @@ class VueRouter extends VueLibraryBase
                     }
                     if ($c) {
                         // ignore script and style tag...
-                        $options = HtmlRenderer::CreateRenderOptions();
-                        $options->skipTags = ["style", "script"];
-                        // $v_tcx = HtmlRenderer::Render($c, $options);
-                        // $data["template"] = self::evalJSString($v_tcx);
-
+                        if ($this->useTemplateEngine){
+                            $options = HtmlRenderer::CreateRenderOptions();
+                            $options->skipTags = ["style", "script"];
+                            $v_tcx = HtmlRenderer::Render($c, $options);
+                            $data["template"] = self::evalJSString($v_tcx);
+                        } else {
                         //+ transform to component
-                        $component = VueSFCCompiler::ConvertToVueRenderMethod($c, $options);
-                        unset($data['template']);
-                        if ($data){
-                            // merge extra options data 
-                            if ($s = trim(implode(', ', $data))){
-                                $component .= ','.$s;
+                            $name = null;
+                            $options = null;
+                            $component = VueSFCCompiler::ConvertToVueRenderMethod($c, $options);
+                            unset($data['template']);                        
+                            if ($data){
+                                $name = igk_getv($data, 'name');
+                                unset($data['name']);
+                                $ts = [];
+                                foreach($data as $k=>$v){
+                                    if (is_numeric($k)){
+                                        $ts[] = $v;
+                                    }else{
+                                        // $ts[] = sprintf("%s:%s", $k,JSExpression::Litteral($v));
+                                    }
+                                }
+                                // merge extra options data 
+                                if ($s = trim(implode(', ', $ts))){
+                                    $component .= ','.$s;
+                                }
                             }
+                            if ($name){
+                                $tdata['name'] = $name;
+                            }
+                            $tdata["component"] = JSExpression::Litteral(sprintf('{%s}', $component));
                         }
-                        $tdata["component"] = JSExpression::Litteral(sprintf('{%s}', $component));
 
                     } else if (is_array($data) && isset($data["component"])) {
                         $tdata["component"] = $data["component"];
@@ -357,8 +381,12 @@ class VueRouter extends VueLibraryBase
         $args = null;
         if ($t == self::vueWebHistory) {
             $args = "'{$this->baseUri}'";
-            // $args = "'/testapi/vite'";
         }
+
+        foreach($v_libInUses  as $k){
+
+        }
+
 
         $sb->append("const _r = createRouter({history:{$t}({$args}), " .
             "strict: true," .
@@ -369,7 +397,7 @@ class VueRouter extends VueLibraryBase
             "]});");
         // global definition method   
         // $sb->append("beforeEach(function(to, from){ console.debug('date loading'); return true; }");    
-        //$sb->appendLine(");");
+        // $sb->appendLine(");");
         foreach (["beforeEach", "afterEach", "beforeResolve"] as $k) {
             if ($this->$k) {
                 $src = JSExpression::Stringify($this->$k);

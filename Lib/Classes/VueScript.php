@@ -91,6 +91,9 @@ class VueScript
             };
             return $g;
         }
+        if (!empty($src)){
+            $src = rtrim($src,";");
+        }
         return $src;
     }
 }

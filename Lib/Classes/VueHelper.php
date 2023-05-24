@@ -84,7 +84,7 @@ abstract class VueHelper
     }
     public static function IncRouteOptions(string $path, $args=[], $routeOptions =[],  BaseController $ctrl=null){
         $defs = [];
-        $defs['template']= ViewHelper::Article($path, $args);
+        $defs['template']= ViewHelper::Article($path, $args, $ctrl);
         if ($src = self::IncControllerArticleSetupScript($path. VueConstants::VUE_JS_SETUP_EXT)){
             $defs[] = $src;
         }

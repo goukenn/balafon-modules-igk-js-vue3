@@ -94,3 +94,6 @@ in defs application is a good place.
 const lazyPrivacy = () => import('/lazyPrivacy.vue')
 JS)
 ```
+
+
+- Fix teleport generation 
