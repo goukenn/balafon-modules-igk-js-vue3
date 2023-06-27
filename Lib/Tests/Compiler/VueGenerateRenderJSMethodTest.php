@@ -73,7 +73,7 @@ class VueGenerateRenderJSMethodTest extends ModuleBaseTestCase{
       
         $n->load("<router-view v-slot=\"{Component}\"><transition><component :is='Component'></component></transition></router-view>");
         $this->assertEquals(
-            "render(){const{h,resolveComponent,resolveDynamicComponent,Transition}=Vue;const \$__c=(q,n)=>(n in q)?((f)=>typeof(f)=='function'?f():(()=>f)())(q[n]):resolveComponent(n);const _vue_routerview=\$__c(this,'RouterView');return h('div',[h(_vue_routerview,({Component})=>[h(Transition,()=>[h(resolveDynamicComponent(Component))])])])}",            
+            "render(){const{h,resolveComponent,resolveDynamicComponent,Transition}=Vue;const \$__c=(q,n)=>(n in q)?((f)=>typeof(f)=='function'?f():(()=>f)())(q[n]):resolveComponent(n);const _vue_routerview=\$__c(this,'RouterView');return h('div',[h(_vue_routerview,{},({Component})=>[h(Transition,()=>[h(resolveDynamicComponent(Component))])])])}",            
             VueSFCCompiler::ConvertToVueRenderMethod($n)
         );
     }

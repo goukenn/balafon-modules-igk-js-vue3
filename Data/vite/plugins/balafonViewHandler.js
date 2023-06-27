@@ -38,6 +38,7 @@ function balafonViewHandler(options) {
         'virtual:balafon-routes', // to inject routes() 
         'virtual:balafon-menus',  // to inject menus()
         'virtual:balafon-corejs-vite-helper',
+        'virtual:balafon-router-components', // get routes components components in uses
     ];
     const v_idxs = []
     const v_pwd = process.cwd();
@@ -73,9 +74,6 @@ function balafonViewHandler(options) {
                 });
                 return response;
             }
-        },
-        moduleParsed(i) {
-            // 
         },
         resolveId(id) {
             const idx = v_modules.indexOf(id);
@@ -145,7 +143,8 @@ function balafonViewHandler(options) {
                          */
                         cmd = 'cd ' + wdir + ' && balafon '
                             + ' --vue3:vite-get-document balafon-i18n ' + ctrl + ' ' + lang;
-                        return export_cmd(cmd);
+                        let o = export_cmd(cmd);
+                        return o;
                     case 'virtual:balafon-routes':
                         /**
                          *  export { routes() },
@@ -170,6 +169,13 @@ function balafonViewHandler(options) {
                         + ' --vue3:vite-get-document balafon-api '
                         + [ctrl, api_name].join(' ');
                         return export_cmd(cmd);
+                    case 'virtual:balafon-router-components':
+                        //+ | get application component 
+                        cmd = 'cd ' + wdir + ' && balafon '
+                        + ' --vue3:vite-get-document balafon-router-components '
+                        + [ctrl, route_name].join(' ');
+                        return export_cmd(cmd);
+                        break;
                     case 'virtual:balafon-view':
                     default:
                         return 'export const msg="not implement";';
@@ -177,7 +183,7 @@ function balafonViewHandler(options) {
             }
         },
         buildStart() {
-            console.log("[BLF]: start build *****************************");
+            console.log("[BLF]: start build *** ");
         }
     }
 }

@@ -23,6 +23,10 @@ class ViteMenuInfo
     var $id;
 
     var $title;
+    /**
+     * svg presentation icons
+     * @var mixed
+     */
     var $svg;
     var $alt;
     var $target;

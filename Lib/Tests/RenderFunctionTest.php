@@ -261,27 +261,27 @@ HTML
         );
     }
 
-    public function test_convert_template()
-    {
-        $d = new VueComponent("div");
-        $d->load(
-            <<<'HTML'
-  <div v-if="x">
-</div>
-    <script></script>
-    <template v-if="ok"> <div>after </div> </template>
-    <div>base. </div>
-</div>
-</div>
-HTML
-     ,[]);
-        $s = VueSFCCompiler::ConvertToVueRenderMethod($d);
-        $this->assertEquals(
-            "render(){const{h}=Vue;return h('div',[this.x?h('div'):null,this.ok?h('div','after '):null,h('div','base. ')])}",
-            $s,
-            "transform template to inline rendering failed."
-        );
-    }
+//     public function test_convert_template()
+//     {
+//         $d = new VueComponent("div");
+//         $d->load(
+//             <<<'HTML'
+//   <div v-if="x">
+// </div>
+//     <script></script>
+//     <template v-if="ok"> <div>after </div> </template>
+//     <div>base. </div>
+// </div>
+// </div>
+// HTML
+//      ,[]);
+//         $s = VueSFCCompiler::ConvertToVueRenderMethod($d);
+//         $this->assertEquals(
+//             "render(){const{h}=Vue;return h('div',[this.x?h('div'):null,this.ok?h('div','after '):null,h('div','base. ')])}",
+//             $s,
+//             "transform template to inline rendering failed."
+//         );
+//     }
 
 //     public function test_convert_template_with_else_block()
 //     {

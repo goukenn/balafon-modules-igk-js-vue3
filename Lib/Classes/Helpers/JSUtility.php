@@ -106,4 +106,80 @@ abstract class JSUtility{
         }
         return $exp;
     }
+
+        /**
+     * treat source and get loaded import
+     * @param string $src 
+     * @return null|array 
+     */
+    static function GetImport(string & $src):?array{
+        $imports = [];
+        $l = JSTokenReader::GetAllToken($src);
+        $v = '';
+        $i = false; // check of import 
+        $end = false;
+        $append =false;
+        //wait until litteral to close 
+        $litteral = false;
+        $skip = false;
+        $tv = '';
+        while(!$end && (count($l)>0)){
+            $q = array_shift($l);
+            $tv = $q[1];
+            switch($q[0]){
+                case JSTokenReader::TOKEN_LITTERAL_STRING:
+                    if ($i){
+                        $litteral = true;
+                    }
+                    break;
+                case JSTokenReader::TOKEN_RESERVERD_WORD:                
+                    if (!$i){
+                        if ($tv=='import'){
+                            $i = true;                        
+                        }
+                    } 
+                    break;
+                default:
+                    if ($i && $litteral && in_array($q[1], [";","\n"])){
+                        $append = true;
+                        $litteral = false;
+                    }
+                break;
+            }
+            if (!$i && ($q[1]=='(')){
+                $end = true;
+                continue;
+            }
+
+            if ($i){                
+                if (empty(trim($tv))){
+                    if (!$skip){
+                        $tv =' ';
+                        $skip = true;
+                    }
+                    else{
+                        $tv ='';
+                    }
+                } else {
+                    $skip = false;
+                }
+            }
+            $v.= $tv;
+            if ($append){
+                $imports[] = $v; 
+                $v = '';
+                $append = false;
+                $i = false;
+                $litteral = false;
+            }
+        } 
+        if ($i && !empty($v)){
+            $imports[] = trim($v); 
+            $v = '';
+        }
+        // combine rest of token 
+        $src =  $tv.implode("" , array_map(function($a){ return $a[1]; }, $l));
+        return $imports;
+    } 
+
 }

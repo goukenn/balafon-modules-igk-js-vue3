@@ -4,9 +4,15 @@
 // @date: 20230418 13:09:40
 namespace igk\js\Vue3\System\IO;
 
+use IGK\Helper\IO;
+use igk\js\Vue3\Compiler\VueSFCCompiler;
+use igk\js\Vue3\Compiler\VueSFCCompilerOptions;
+use igk\js\Vue3\Compiler\VueSFCUtility;
 use igk\js\Vue3\Components\VueComponent;
 use igk\js\Vue3\System\Html\Dom\VueSFCTemplate;
 use IGK\System\Html\Dom\HtmlNode;
+use IGK\System\Html\HtmlContext;
+use IGK\System\IO\StringBuilder;
 
 ///<summary></summary>
 /**
@@ -49,13 +55,13 @@ class VueSFCFile extends HtmlNode
     }
     public function script()
     {
-        $n = new VueComponent('script');
+        $n = VueComponent::LoadingNodeCreator('script');
         $this->add($n);
         return $n;
     }
     public function style()
     {
-        $n = new VueComponent('style');
+        $n = VueComponent::LoadingNodeCreator('style');
         $this->add($n);
         return $n;
     }
@@ -117,13 +123,13 @@ class VueSFCFile extends HtmlNode
     {
         return new VueSFCTemplate();
     }
-    protected static function _CreateScriptSFCComponent(?array $param = null)
+    protected static function _CreateStyleSFCComponent()
     {
-        return new VueComponent('script');
+        return VueComponent::LoadingNodeCreator('style');
     }
-    protected static function _CreateStyleSFCComponent(?array $param = null)
+    protected static function _CreateScriptSFCComponent()
     {
-        return new VueComponent('style');
+        return VueComponent::LoadingNodeCreator('script');
     }
 
     function _add($n, bool $force = false): bool
@@ -151,5 +157,99 @@ class VueSFCFile extends HtmlNode
             return true;
         }
         return false;
+    }
+
+    /**
+     * compile this view and return definition string
+     * @return void 
+     */
+    public function compile(?VueSFCCompilerOptions $options = null)
+    {
+        $scopedId = '';
+        $data = [];
+        $sb = new StringBuilder;
+        $lib = new StringBuilder;
+        $scoped = false;
+        $options = $options ?? new VueSFCCompilerOptions;
+
+        if ($this->m_scripts) {
+            VueSFCUtility::MergeSetupScript($data, $this->m_scripts, $options);
+        }
+        if ($this->m_styles) {
+            $tdbata = [];
+            VueSFCUtility::MergeStyleScript($tdbata, $this->m_styles, $scopedId, $options, $scoped);
+            $src = sprintf('(()=>{let s=document.createElement("style");return s.innerHTML=`%s`,document.head.append(s),s;})()', implode("\n", $tdbata));
+            $sb->appendLine($src);
+        }
+        $key =  VueSFCUtility::INIT_JS_KEY;
+        $init = igk_getv($data, $key);
+        unset($data[$key]);
+
+
+        $global_import = igk_getv($data, VueSFCUtility::INIT_BS_KEY);
+        unset($data[VueSFCUtility::INIT_BS_KEY]);
+        if ($options) {
+            // $sb->appendLine("/* declare body */");
+            //$sb->appendLine("import 'virtual:balafonjs';");
+            // $sb->appendLine("const { Vue } = window;");
+            // $sb->appendLine("const Vue = window.Vue;");
+        }
+        if ($init) {
+            //$sb->appendLine(implode("\n", $init));
+        }
+        if ($global_import) {
+            $sb->appendLine(implode("\n", $global_import));
+        }
+
+        if ($t = $this->m_template) {
+            if ($scoped) {
+                foreach ($t->getElementsByTagName('*') as $lm) {
+                    $lm->activate($scopedId);
+                }
+            }
+            $options->test = true;
+            $render = VueSFCCompiler::ConvertToVueRenderMethod($t, $options);
+            if ($render) {
+                array_unshift($data, $render);
+            }
+            $lib->appendLine('import * as Vue from \'vue\';');
+            if ($options->defineGlobal) {
+                $sb->append(implode("", $options->defineGlobal));
+            }
+        }
+
+        if (!$lib->isEmpty()) {
+            $sb->prependLine(trim($lib . ''));
+        }
+        $sb->appendLine(sprintf("export default {%s}", implode(",", $data)));
+
+        return $sb . '';
+    }
+    public function loadFile(string $file, $options = null, $args = null)
+    {
+        if (!is_file($file))
+            return false;
+        $content = IO::ReadAllText($file);
+        if (empty($content)) {
+            return $this;
+        }
+        $op = null;
+        if (is_string($options)) {
+            $op = ["Context" => $options];
+        } else {
+            $op = (object)$options;
+        }
+        $options = igk_create_filterobject($op, ["stripComment" => 0]);
+        if ($options->stripComment) {
+            $content = igk_html_strip_comment($content);
+        }
+        if (is_array($args))
+            $args = (object)$args;
+        else {
+            $args = $options;
+        }
+        $args->Context = HtmlContext::Html;
+        $args->noInterpolation = true;
+        return $this->load($content, $args);
     }
 }

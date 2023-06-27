@@ -19,6 +19,7 @@ trait VueSFCRenderResolveDynamicComponentTrait{
         return key_exists($tag, $this->m_options->components);
     }
     public function resolveComponent($tagname){
-        return VueSFCUtility::ResolveComponent($tagname, $this->m_options, VueConstants::VUE_METHOD_RESOLVE_DYNAMIC_COMPONENT);       
+
+        return VueSFCUtility::ResolveComponent($tagname, $this->m_options, $v_slot=false, $this->options, VueConstants::VUE_METHOD_RESOLVE_DYNAMIC_COMPONENT);       
     }
 }

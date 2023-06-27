@@ -28,4 +28,16 @@ class VueSFCCompilerOptions{
      * @var ?bool
      */
     var $test;
+
+    /**
+     * for custom registration list component
+     * @var ?array
+     */
+    var $components;
+
+    /**
+     * 
+     * @var mixed
+     */
+    var $defineGlobal;
 }

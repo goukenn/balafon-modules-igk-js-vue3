@@ -30,19 +30,21 @@ class SFCScriptSetup
         $def = [];
         $declare_mode = false;
         $end = false;
-        while (!$end && $jsreader->read()) {
-            // igk_debug_wln("type = " . $jsreader->type, "value = " . $jsreader->value);
+        while (!$end && $jsreader->read()) { 
+            $cvalue = $jsreader->value;
             if ($jsreader->depth == 0) {
                 switch ($jsreader->type) {
                     case $jsreader::TOKEN_RESERVED_WORD:
-                        if (($mode == 0) && in_array($jsreader->value, ['var', 'let', 'const', 'return', 'function'])) {
-                            if ($jsreader->value == "return") {
+                        if (($mode == 0) && in_array($cvalue, ['var', 'let', 'const', 'return', 'import', 'function'])) {
+                            if ($cvalue== "return") {
                                 $end = true;
                                 $def = null;
                                 break;
                             }
                             $mode = 1;
                             $declare_mode = true;
+                        } else {
+                            $mode = 0;
                         }
                         break;
                     case $jsreader::TOKEN_WORD:
@@ -50,8 +52,7 @@ class SFCScriptSetup
                             $def[$jsreader->value] = $jsreader->value;
                         }
                         break;
-                    case $jsreader::TOKEN_OPERATOR:
-
+                    case $jsreader::TOKEN_OPERATOR: 
                         if (($jsreader->value == ",") &&  $declare_mode) { // declaration initialiation 
                             $mode = 1;
                         } else if (($jsreader->value == ';') || ($jsreader->value == "\n")) {
@@ -90,9 +91,8 @@ class SFCScriptSetup
             $cv = $jsreader->value;
             if ($jsreader->depth == 0) {
                 switch ($jsreader->type) {
-
                     case $jsreader::TOKEN_RESERVED_WORD:
-                        if (!$follow){
+                        if (!$follow) {
                             if ($cv == "this") {
                                 $follow = true;
                             }
@@ -107,11 +107,11 @@ class SFCScriptSetup
                         break;
                     default:
                         if ($follow) {
-                            if ($jsreader->type == $jsreader::TOKEN_OPERATOR ){
+                            if ($jsreader->type == $jsreader::TOKEN_OPERATOR) {
                                 $follow = $cv == '.';
                             } else {
-                               // if ($jsreader->type == $jsreader::TOKEN_BRACKET){
-                                    $follow==false;
+                                // if ($jsreader->type == $jsreader::TOKEN_BRACKET){
+                                $follow == false;
                                 //}
                             }
                         }
@@ -121,5 +121,19 @@ class SFCScriptSetup
             $s .= $cv;
         }
         return $s;
+    }
+
+
+    public static function TreatScript(string $src, array &$lib)
+    {        
+        $pattern = '/^\s*import\s+(([\w{}*\n\r\t, ]+)\s+from\s+)?([\'"])(?P<path>[^\'"]+)\\3\s*(;|\n)/m';
+        $c = preg_match_all($pattern, $src, $tab);
+        if ($c){
+            for($i = 0; $i < $c; $i++){        
+                $src = str_replace($tab[0][$i], '', $src);
+                $lib[] =  $tab[0][$i];
+            }
+        }
+        return $src;        
     }
 }

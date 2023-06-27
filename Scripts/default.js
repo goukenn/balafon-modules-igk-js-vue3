@@ -1,14 +1,12 @@
-// default entry script 
-// @desc: igk.js.vue3
-
+// @desc: default entry script  
+// @file: igk.js.vue3
 "use strict";
-(function () {
-    // import('./vite.js');
+(function () { 
     const _sfc_register = {};
     // store shared data between different app 
     const _app_shared_uses = {};
     /**
-     * load .vue data
+     * load .vue data from import
      * @param {t} t text data to load
      * @param {*} resolve promise resolution
      * @param {*} reject in case of eror
@@ -186,11 +184,7 @@
             pos++;
         }
         return ret;
-    }
-
-
-
-
+    } 
     const sfc = {
         load(text) {
             var dataUri = igk.system.modules.esm`${script.text()}`;
@@ -343,8 +337,7 @@
             });
             return p;
         }
-    });
-
+    }); 
     igk.appendProperties(_NS, {       
         shared(data) {
             for (var i in data) {

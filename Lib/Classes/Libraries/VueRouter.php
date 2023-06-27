@@ -19,6 +19,7 @@ use igk\js\Vue3\Components\VueNoTagNode;
 use igk\js\Vue3\JS\VueLazyImportExpression;
 use igk\js\Vue3\JS\VueLazyLoadExpression;
 use igk\js\Vue3\System\Controller\VueControllerMacrosExtension;
+use igk\js\Vue3\Vite\Compiler\ViteSFCCompiler;
 use igk\js\Vue3\Vite\RoutedMenuDefinition;
 use igk\js\Vue3\Vite\RoutedMenusBase;
 use igk\js\Vue3\Vite\ViteMenuHelper;
@@ -37,7 +38,7 @@ use IGKHtmlDoc;
 use IGKResourceUriResolver;
 use ReflectionException;
 use ReflectionMethod;
-use stdClass; 
+use stdClass;
 
 /**
  * vue router library helper
@@ -54,9 +55,19 @@ class VueRouter extends VueLibraryBase
     const vueWebHistory = "createWebHistory";
     const MenuRouteOptions = 'vue.routeOptions';
 
-
+    /**
+     * routed components
+     * @var array
+     */
+    private $m_components = [];
 
     var $options;
+
+    /**
+     * preload script before script render 
+     * @var mixed
+     */
+    var $preload;
 
     /**
      * use library template engine
@@ -100,16 +111,31 @@ class VueRouter extends VueLibraryBase
         }
         return $ref;
     }
-    public static function InitRoute(?BaseController $ctrl, string $route_name = null, ?string $refUri = null, ?VueRouter &$ref = null)
+    /**
+     * 
+     * @param null|BaseController $ctrl 
+     * @param string|null $route_name 
+     * @param null|string $refUri 
+     * @param null|VueRouter $ref 
+     * @param mixed|IVueInitRouteOptions $options sourceDir|
+     * @return VueRouter|static 
+     * @throws IGKException 
+     */
+    public static function InitRoute(?BaseController $ctrl, string $route_name = null, ?string $refUri = null, ?VueRouter &$ref = null, $options = null)
     {
         $ref = $ref ?? new static;
         $ctrl::RegisterExtension(VueControllerMacrosExtension::class);
         $route_name = $route_name ?? self::DEFAULT_ROUTE_FILE;
+        if ($options) {
+            // passing the created router to options
+            $options->router = $ref;
+        }
         $definition = ViewHelper::Inc($ctrl->configFile($route_name), [
             'router' => $ref,
             'ctrl' => $ctrl,
             'refUri' => $refUri,
             'builder' => new HtmlNodeBuilder(igk_create_notagnode()), // component builder 
+            'options' => $options
         ]);
         if (is_array($definition)) {
             $ref->_initDefinition($definition);
@@ -178,7 +204,8 @@ class VueRouter extends VueLibraryBase
      * 
      * @param string $path 
      * @param mixed|string|array|HtmlNode|VueLazyImportExpression|VueRouteOptions $data component to use \
-     * if array : array['template', 'useProps']
+     * if array : array['template', 'useProps'] \
+     * Litterl definition : string, (()=>{...})(), props : 
      * @return static 
      * @throws IGKException 
      */
@@ -273,14 +300,19 @@ class VueRouter extends VueLibraryBase
         $t = $this->getHistoryMethod();
         $v_extra = '';
         $_id = $this->getVarName();
-        $sb->appendLine("/** vue-router **/");
+        $sb->appendLine("/** vue-router :: render **/");
+        if ($preload = $this->preload) {
+            $sb->appendLine($preload);
+        }  
         $lib_n = '';
         // inject constant helper in application context
         if ($this->m_libraries) {
-            $vue_lib = igk_getv($this->m_libraries, 'Vue');
-            $lib_n = implode(",", array_keys($vue_lib));
-            $sb->appendLine("const Vue = {" . $lib_n . "};");
-            $lib_n .= ',';
+
+            if ($vue_lib = igk_getv($this->m_libraries, 'Vue')) {
+                $lib_n = implode(",", array_keys($vue_lib));
+                // $sb->appendLine("const Vue = Vue || {" . $lib_n . "};");
+                $lib_n .= ',';
+            }
         } else {
             $sb->appendLine("const {Text, h} = Vue;");
         }
@@ -295,10 +327,7 @@ class VueRouter extends VueLibraryBase
         $v_libInUses = [];
         if ($v_routes)
             foreach ($v_routes as $path => $data) {
-
-                // $data = JSExpression::Stringify([$data], (object)["objectNotation"=>1]);
                 $tdata = ["path" => $path, "component" => null];
-                // igk_wln_e(__FILE__.":".__LINE__,  $data);
                 if (is_string($data)) {
                     $data = JSExpression::Create($data);
                     $tdata["component"] =  $data;
@@ -331,39 +360,38 @@ class VueRouter extends VueLibraryBase
                     }
                     if ($c) {
                         // ignore script and style tag...
-                        if ($this->useTemplateEngine){
+                        if ($this->useTemplateEngine) {
                             $options = HtmlRenderer::CreateRenderOptions();
                             $options->skipTags = ["style", "script"];
                             $v_tcx = HtmlRenderer::Render($c, $options);
                             $data["template"] = self::evalJSString($v_tcx);
                         } else {
-                        //+ transform to component
+                            //+ transform to component
                             $name = null;
                             $options = null;
                             $component = VueSFCCompiler::ConvertToVueRenderMethod($c, $options);
-                            unset($data['template']);                        
-                            if ($data){
+                            unset($data['template']);
+                            if ($data) {
                                 $name = igk_getv($data, 'name');
                                 unset($data['name']);
                                 $ts = [];
-                                foreach($data as $k=>$v){
-                                    if (is_numeric($k)){
+                                foreach ($data as $k => $v) {
+                                    if (is_numeric($k)) {
                                         $ts[] = $v;
-                                    }else{
+                                    } else {
                                         // $ts[] = sprintf("%s:%s", $k,JSExpression::Litteral($v));
                                     }
                                 }
                                 // merge extra options data 
-                                if ($s = trim(implode(', ', $ts))){
-                                    $component .= ','.$s;
+                                if ($s = trim(implode(', ', $ts))) {
+                                    $component .= ',' . $s;
                                 }
                             }
-                            if ($name){
+                            if ($name) {
                                 $tdata['name'] = $name;
                             }
                             $tdata["component"] = JSExpression::Litteral(sprintf('{%s}', $component));
                         }
-
                     } else if (is_array($data) && isset($data["component"])) {
                         $tdata["component"] = $data["component"];
                     } else {
@@ -383,8 +411,7 @@ class VueRouter extends VueLibraryBase
             $args = "'{$this->baseUri}'";
         }
 
-        foreach($v_libInUses  as $k){
-
+        foreach ($v_libInUses  as $k) {
         }
 
 
@@ -516,7 +543,7 @@ class VueRouter extends VueLibraryBase
      * @return void 
      */
     private function _bindExtraProperty(&$tdata, $data)
-    {
+    { 
         if (!is_array($data)) {
             return;
         }
@@ -662,10 +689,10 @@ class VueRouter extends VueLibraryBase
         $helper = new ViteMenuHelper;
         while (count($classes) > 0) {
             $class_name = array_shift($classes);
-            RoutedMenusBase::BindClass($class_name, $ctrl, $helper, function($routed_method){
+            RoutedMenusBase::BindClass($class_name, $ctrl, $helper, function ($routed_method) {
                 if ($routed_method->route)
-                    $this->addRoute($routed_method->route, $routed_method->component);     
-            }); 
+                    $this->addRoute($routed_method->route, $routed_method->component);
+            });
         }
     }
     /**
@@ -682,8 +709,48 @@ class VueRouter extends VueLibraryBase
         $this->m_libraries[$path] = $name;
         return JSExpression::Litteral($name);
     }
-
-    public function importComponent(string $path, string $name){        
+    /**
+     * use application component
+     * @param mixed $name 
+     * @param string $path path in application 
+     * @return void 
+     */
+    public function useComponent($name, string $path)
+    {
         $this->m_libraries[$path] = $name;
+    }
+    
+    public function litteral(string $name)
+    {
+        return JSExpression::Litteral($name);
+    }
+
+    public function importComponent(string $path, string $name)
+    {
+        $this->m_libraries[$path] = $name;
+    }
+
+    public function registerComponent(string $name, BaseController $controller, $path, $options)
+    {
+        if ($o = ViteSFCCompiler::BuildComponent($controller, $path, $options)) {
+            $this->m_libraries[$path] = $name;
+            $this->m_components[$name] = $o;
+            return $o;
+        }
+    }
+    /**
+     * 
+     * @param string $name 
+     * @return null|object|string 
+     * @throws IGKException 
+     * @throws ArgumentTypeNotValidException 
+     * @throws ReflectionException 
+     */
+    public function getRegComponent(string $name)
+    {
+        if ($s = igk_getv($this->m_components, $name)) {
+            return JSExpression::Litteral($s);
+        }
+        return 'no component: ' . $name;
     }
 }

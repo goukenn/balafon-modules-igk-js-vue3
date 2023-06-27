@@ -91,11 +91,21 @@ class Vuei18n
         .$sb.'return '.$n.';})( {'.$method.'});');
        return $sb . '';
    }
+   /**
+    * define inline data 
+    * @param BaseController $ctrl 
+    * @param mixed $useglobal_resource 
+    * @param mixed $fallback_lang 
+    * @return string 
+    * @throws IGKException 
+    * @throws ArgumentTypeNotValidException 
+    * @throws ReflectionException 
+    */
    public static function BuildLocaleDefinition( BaseController $ctrl, $useglobal_resource, $fallback_lang){
         $obj = igk_createobj();  
-        $sb = new StringBuilder;
         $obj->detectMethod = false;
         $obj->useObjectNotation = true;
+        $sb = new StringBuilder;
         $current_lang = 'en';
         $msg = JSExpression::Stringify((object)I18nLocaleHelper::LoadLocale($ctrl, $useglobal_resource, $fallback_lang), $obj);
 
@@ -107,5 +117,15 @@ class Vuei18n
         ], (object)['objectNotation' => true]));
 
         return $sb.'';
+   }
+   public static function CreateDefinition(BaseController $ctrl, bool $useglobal_resource, ?string $current_lang=null, string $fallback_lang='en'){
+    $f = (object)I18nLocaleHelper::LoadLocale($ctrl, $useglobal_resource, $fallback_lang);
+
+    return (object)[
+        "legacy"=>false, // + |  to support composition api - avoid error - 24
+        "locale" => $current_lang,
+        "fallbackLocale" => $fallback_lang, 
+        "messages" => $f, // JSExpression::Litteral($msg),
+    ];
    }
 }

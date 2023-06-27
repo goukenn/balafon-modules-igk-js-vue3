@@ -1,0 +1,88 @@
+(0, (menulist)=>{ 
+    function chainNS(o, n){
+        var t = n.split(".");
+        var win = o;
+        if (win) { 
+            for (var i = 0; win && i < t.length; i++) {
+                let d = win[t[i]];
+                if (!d){
+                    win[t[i]] = {};
+                } else if (typeof(d)=='string'){
+                    let rf = (function(ns){
+                        let f = () => ns;
+                        f.toString = ()=>ns;
+                        return f
+                    })(d);
+                    win[t[i]] = rf;
+                } else {
+                    // throw new Error('can chaine');
+                    console.log('--------------------ref',d);
+                }
+                win = win[t[i]];
+            } 
+            return win;
+        }
+        return null;
+    };
+    const _api= {};
+    let v_ns = '';
+    let l = menulist; 
+
+    function chainValue(b, i){
+        let ts = typeof(b);
+        switch(ts){
+            case 'function':
+                return ((b)=> { return ()=>b()})(b);
+            case 'object':
+                let c = ((b)=>{ return ()=>b; })(b);
+                igk.appendProperties(c, b) ;
+                c.toString = ()=>i;
+                return c;
+            default:
+                throw new Error("not allowed");
+        }
+    }
+    for(var i in l){
+        if (i.indexOf('.') != -1){
+            let tb = i.split('.');
+            let key = tb.pop();
+            let pk = tb.join('.');
+            v_ns = igk.system.getNS(pk, _api);
+            if (v_ns){
+                let ts = typeof(v_ns);
+                if (ts == 'string'){
+                    let rf = (function(ns){
+                        let f = () => ns;
+                        f.toString = ()=>ns;
+                        return f
+                    })(v_ns);
+                    //replace value
+                    let p = igk.setProperty(_api, pk, rf);
+                    if (p){
+                        p[key] =  l[i];
+                        rf[key] =  l[i];
+                    } 
+                } else if (ts == 'object'){
+                    // console.log("render object.....", ts, key, v_ns);
+                    // ts[key] = 
+                    v_ns[key]= l[i];
+                    //v_ns = chainNS(_api, pk); 
+                }
+                else if (ts == 'function'){
+                    let b = v_ns[key];
+                    if (b){ 
+                        v_ns[key] = chainValue(b, l[i]);
+                    } else { 
+                        v_ns[key] =l[i];
+                    }
+                }              
+            } else {
+                v_ns = chainNS(_api, pk); 
+                v_ns[key] = l[i];
+            } 
+        } else {
+            _api[i] = l[i];
+        }
+    }
+    return _api;    
+})(%s);

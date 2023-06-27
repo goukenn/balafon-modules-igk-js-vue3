@@ -77,9 +77,11 @@ abstract class VueHelper
     /**
      * use script file as library to inject to view app core definition before createAppMethod 
      * @param string $file 
-     * @return null|VueLibraryBase 
+     * @return null|VueFileLibrary
      */
     public static function UseScriptLibrary(string $file):?VueLibraryBase{
+        if (!is_file($file))
+            return null;
         return new VueFileLibrary($file); 
     }
     public static function IncRouteOptions(string $path, $args=[], $routeOptions =[],  BaseController $ctrl=null){

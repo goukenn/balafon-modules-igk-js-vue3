@@ -257,8 +257,8 @@ abstract class VueMacrosExtensions{
      * @throws IGKException 
      * @throws EnvironmentArrayException 
      */
-    public static function vComponent(HtmlNode $node){        
-        $n = new VueComponentNode();
+    public static function vComponent(HtmlNode $node){                
+        $n = new VueComponentNode();        
         $node->add($n);
         return $n;
     }

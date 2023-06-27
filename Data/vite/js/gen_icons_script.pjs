@@ -1,0 +1,33 @@
+//
+// @desc: define svg icons with vue use
+// @author: C.A.D. BONDJE DOUE
+// @generator: vite-js-helper
+// 
+import * as Vue from 'vue';
+const { h, defineAsyncComponent } = Vue;
+export default {
+    props:{
+        name:{
+            type:String,
+            required: true
+        }
+    },  
+    setup(props){
+        const c_icon_ = defineAsyncComponent(()=> import (/* @vite-ignore */`./icons/${props.name}.vue`)); 
+        return function(p){
+            const slots = p.$slots;  
+            return h('span', {class:['svg-icons-container','%libname%', this.className]},{
+                default: function(){ 
+                    return [h(c_icon_), slots.default ? slots.default({title: props.name}) : h('span', {title:props.name})];
+                }
+            }); 
+        }
+    }, 
+    computed:{
+        className(){ 
+            let cl = this.$props.name; 
+            cl = cl.replaceAll('.','-').replaceAll(' ', '');
+            return cl;
+        }
+    },
+}

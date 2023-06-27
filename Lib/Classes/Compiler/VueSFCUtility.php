@@ -14,6 +14,8 @@ use IGK\System\Regex\Replacement;
 * @package igk\js\Vue3\Compiler
 */
 abstract class VueSFCUtility{
+    const INIT_JS_KEY = "\0__init__";
+    const INIT_BS_KEY = "\0__global_import__";
     /**
      * interpolate values
      * @param string $v 
@@ -123,9 +125,10 @@ abstract class VueSFCUtility{
      * @param array $lib 
      * @return string 
      */
-    public static function RenderLibraryAsConstantDeclaration(array $lib, ?string & $globalImport = ''): string {
+    public static function RenderLibraryAsConstantDeclaration(array $lib, ?string & $globalImport = '', & $components = null): string {
         $sb = [];
         $globalImport = '';
+        $components = [];
         foreach($lib as $k=>$v){
             if (is_array($v)){
                 $tab = array_keys($v);
@@ -133,9 +136,14 @@ abstract class VueSFCUtility{
                 $sb[] = sprintf('const { %s } = '.$k.';', implode(",", $tab));
             } else {
                 $globalImport .= 'import '.$v.' from \''.$k.'\';';
+                $components[] = $v;
             }
         }
         return implode("", $sb);
+    }
+
+    public static function RenderRangeFunction(){
+        return 'const _range = (min,max)=>[...Array(max-min+1)].map((_,i)=>min+i);';
     }
     public static function RenderLibraryAsImportStatementDeclaration(array $lib): string {
         $sb = [];
@@ -145,5 +153,69 @@ abstract class VueSFCUtility{
             $sb[] = sprintf('import { %s } from '.$k.';', implode(",", $tab));
         }
         return implode("", $sb);
+    }
+    /**
+     * merging setup script
+     */
+    public static function MergeSetupScript(array & $data, $scripts, $options = null){
+        $setup = false;
+        foreach($scripts as $sc){
+            $src = $sc->Content;
+            if (empty($src)){
+                continue;
+            }
+            if ($sc['setup']){
+                $setup && igk_die("setup script must be create once");
+                $setup = true;
+
+                // treat soure and resolv global defintion 
+                if ($def = SFCScriptSetup::DetectVarResponse($src)){
+                    $def = array_keys($def);
+
+                    $options->components = array_fill_keys(
+                        array_merge($def, array_keys($options->components??[])) ,
+                        1); 
+                }
+                $gimport_key = self::INIT_BS_KEY;
+                if (!isset($data[$gimport_key])){
+                    $data[$gimport_key] = [];
+                }
+                $lib = & $data[$gimport_key];
+                $src = SFCScriptSetup::TreatScript($src, $lib); 
+
+                if ($def){
+                    $src .= sprintf("return {%s};", implode(",", $def));
+                }
+
+                $data[] = sprintf('setup(props,ctx){%s}', $src);
+
+            } else {
+                $key = self::INIT_JS_KEY;
+                if (!isset($data[$key])){
+                    $data[$key] = [];
+                }
+                $data[$key][] = sprintf("(()=>{ igk.vue3.ems`%s`; })()",$src);
+            }
+
+        }
+    }
+
+    /**
+     * merge style for injections
+     * @param array $data 
+     * @param mixed $scripts 
+     * @param string $scopedId 
+     * @param mixed $options 
+     * @return void 
+     */
+    public static function MergeStyleScript(array & $data, $scripts, string $scopedId, $options=null, & $scoped= null){
+        foreach($scripts as $sc){
+            $style = '';
+            $style = $sc->getContent();
+            if ($sc['scoped']){
+                $scoped = true;
+            } 
+            $data[] = $style;
+        }
     }
 }

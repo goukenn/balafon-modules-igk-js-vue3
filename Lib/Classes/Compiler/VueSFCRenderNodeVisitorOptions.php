@@ -14,10 +14,23 @@ class VueSFCRenderNodeVisitorOptions{
     var $libraries = [];
     var $defineArgs = [];
     var $defineGlobal = [];
-
     var $component_prefix = '_vue_';
     var $global_prefix = '$__';
     var $components = [];
+    /**
+     * flag: preserve interpolation 
+     * @var bool
+     */
+    var $preserveInterpolation = false;
+
+    var $useRenderContextArgs = false;
+
+    var $useRangeMethod = false;
+
+    // for scope component register slot template definitions
+    var $slot_templates = [];
+
+    var $noCloseArrayFlag = false;
 
     /**
      * test mode

@@ -21,7 +21,9 @@ use ReflectionException;
 */
 class ViteMenuHelper{
     var $source;
+    private $m_library = [];
     private $m_idcounter = 0;
+    const LIB_KEYS = '\0Library';
     const MENU_NAME = 'vue-vite-menus.pinc';
 
     /**
@@ -45,6 +47,7 @@ class ViteMenuHelper{
         if ($binding = $menu->getMenus() ){
             $tab = array_merge($binding, $tab);
         }
+        $tab[self::LIB_KEYS] = $helper->m_library;
         return $tab;
     }
 
@@ -177,13 +180,18 @@ class ViteMenuHelper{
         return $root;
     }
     private function _addLib($lib, $import){
-
+        //load library
+        $this->m_library[$lib] = $import;
     }
     public function litteral($expression){
         return JSExpression::Litteral($expression);
     }
     public function useIonIcon(string $name){
-        $this->_addLib('IonIcon', '@/lib/IonIcon/Icon.vue');
-        return $this->litteral(sprintf('h(IonIcon,{name:"%s"})', $name));
+        $this->_addLib('IonIcon', '@/components/IonIcon.vue');
+        return $this->litteral(sprintf('(()=>h(IonIcon,{name:"%s"}))()', $name));
+    }
+    public function useSfSymbolIcon(string $name){
+        $this->_addLib('SfSymbolIcon', '@/components/SfSymbolIcon.vue');
+        return $this->litteral(sprintf('(()=>h(SfSymbolIcon,{name:"%s"}))()', $name));
     }
 }

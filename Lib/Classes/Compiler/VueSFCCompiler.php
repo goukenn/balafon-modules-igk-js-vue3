@@ -41,8 +41,8 @@ class VueSFCCompiler
     /**
      * convert node to render methods 
      * @param HtmlItemBase $node 
-     * @param ?VueSFCRenderNodeVisitorOptions $options
-     * @return string 
+     * @param ?array|?VueSFCRenderNodeVisitorOptions|?VueSFCCompilerOptions $options
+     * @return string and options will be as VueSFCRenderNodeVisitorOptions instance
      * @throws IGKException 
      * @throws ArgumentTypeNotValidException 
      * @throws ReflectionException 
@@ -190,9 +190,11 @@ class VueSFCCompiler
     public function mapScript($a)
     {
         $lang = igk_getv($a, "type", "javascript");
+        if (!in_array($lang, ['javascript', 'module'])){
+            igk_die('no supported script');
+        }
         $is_setup = igk_getv($a, "setup");
         $src = $a->getInnerHtml();
-
         if ($is_setup) {
             $src = self::_GetLitteralResult($src);
             // + | ---------------------------------------------

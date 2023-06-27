@@ -4,6 +4,7 @@ namespace igk\js\Vue3\Components;
 use igk\js\Vue3\System\Html\VueLoadingContext;
 use igk\js\Vue3\VueConstants;
 use IGK\System\Html\Dom\HtmlNode;
+use IGK\System\Html\Dom\HtmlScriptNode;
 use IGK\System\Html\HtmlLoadingContext;
 use IGK\System\Html\IHtmlContextContainer;
 use IGKException;
@@ -14,6 +15,10 @@ use IGKException;
  * */
 class VueComponent extends HtmlNode implements IHtmlContextContainer{
   
+    public function __construct($tagname = null)
+    {
+        parent::__construct($tagname);
+    }
     /**
      * get component loading context 
      * @return ?HtmlLoadingContext  
@@ -55,6 +60,15 @@ class VueComponent extends HtmlNode implements IHtmlContextContainer{
      */
     public static function LoadingNodeCreator(string $name, ?array $param = null)
     {
+        if (in_array($name,["script"])){
+
+            switch($name){
+                case "script":
+                    return new VueSFCScriptComponent;
+                case "style":
+                    return new VueSFCStyleComponent;
+            }
+        }
         $n = new self($name);
         if ($param) $n->setAttributes($param);
         return $n;        

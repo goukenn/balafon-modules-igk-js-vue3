@@ -60,6 +60,7 @@ function vue3_bind_manifest(IGKHtmlDoc $doc, string $assets, $type='text/javascr
         return false;
     }
     $main_app = false;
+    $styling = [];
     $rp = json_decode(file_get_contents($f));
     if ($vendor = igk_getv($rp, "chunk-vendors.js")) {
         $doc->addTempScript($assets . "/" . $vendor)->activate("defer");
@@ -83,13 +84,13 @@ function vue3_bind_manifest(IGKHtmlDoc $doc, string $assets, $type='text/javascr
                 igk_die('case not implement .');
             }else{
                 $value = array_values($entries)[0];
-                if ($value->css){
+                if (property_exists($value, 'css') && $value->css){
                     // bind cvss 
                     foreach($value->css as $f){
                         $doc->addTempStyle($assets . "/" . $f);
                     }
                 }
-                if ($imports && $value->imports){
+                if ($imports && property_exists($value, 'imports') && $value->imports){
                     // bind cvss 
                     foreach($value->imports as $f){
                         if ($cf = igk_getv($rp, $f)){
@@ -98,6 +99,11 @@ function vue3_bind_manifest(IGKHtmlDoc $doc, string $assets, $type='text/javascr
                         $doc->addTempScript($assets . "/" . $f)
                         ->setAttribute('type', $type)
                         ->activate("defer");
+
+                        // bind property
+                        if ($css = igk_getv($cf, 'css')){
+                            $styling = array_merge($styling, $css); // , $css
+                        }
                     }
                 }
                 $doc->addTempScript($assets . "/" . $value->file)
@@ -108,7 +114,6 @@ function vue3_bind_manifest(IGKHtmlDoc $doc, string $assets, $type='text/javascr
         }
         
     }
-    $styling = [];
     if ($app_css = igk_getv($rp, 'chunk-vendors.css')) {
         $styling[] = $app_css;
     }

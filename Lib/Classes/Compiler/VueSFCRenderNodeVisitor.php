@@ -14,24 +14,22 @@ use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatBindingAttributeTraitTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatDirectiveAttributeTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatEventAttributeTrait;
 use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatSpecialTagTrait;
-use igk\js\Vue3\Components\VueComponent;
+use igk\js\Vue3\Compiler\Traits\VueSFCRenderTreatTemplateTagTrait;
 use igk\js\Vue3\Components\VueNoTagNode;
 use igk\js\Vue3\Helpers\JSUtility;
+use igk\js\Vue3\System\Html\ChildrenNodeVisitor;
 use igk\js\Vue3\System\Html\Dom\VueSFCTemplate;
 use igk\js\Vue3\VueConstants;
-use IGK\System\ArrayMapKeyValue;
 use IGK\System\Exceptions\ArgumentTypeNotValidException;
 use IGK\System\Html\Dom\HtmlCommentNode;
 use IGK\System\Html\Dom\HtmlHostChildren;
 use IGK\System\Html\Dom\HtmlItemBase;
-use IGK\System\Html\Dom\HtmlNode;
 use IGK\System\Html\Dom\HtmlNoTagNode;
 use IGK\System\Html\Dom\HtmlTextNode;
 use IGK\System\Html\HtmlVisitor;
-use IGK\System\IO\Configuration\ConfigurationEncoder;
 use IGK\System\IO\StringBuilder;
 use IGKException;
-use ReflectionException; 
+use ReflectionException;
 
 igk_require_module(\igk\js\Vue3::class);
 
@@ -52,6 +50,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     use VueSFCRenderTreatBindingAttributeTraitTrait;
     use VueSFCRenderTreatDirectiveAttributeTrait;
     use VueSFCRenderTreatSpecialTagTrait;
+    use VueSFCRenderTreatTemplateTagTrait;
 
     /**
      * stored current node
@@ -82,13 +81,20 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
 
     private $m_last_text = null;
 
-    
+    private $m_root_chain; // preserve the root access
+    private $m_chain_list; // real rendering chaing list state
 
     /**
-     * request extra arguments for render function (props, /[{}]/);
-     * @var array
+     * preserve interpolation expression
+     * @var false
      */
-    protected $requestArgs = [];
+    private $m_preserveExpression = false;
+
+    // /**
+    //  * request extra arguments for render function ($ctx, /[{}]/);
+    //  * @var array
+    //  */
+    // protected $requestArgs = [];
 
     private function __construct(HtmlItemBase $node)
     {
@@ -96,6 +102,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         $this->m_sb = new StringBuilder;
         $this->startVisitorListener = [$this, 'beginVisit'];
         $this->endVisitorListener = [$this, 'endVisit'];
+        $this->m_root_chain = $this->m_chain_list = new VueSFCRenderVisitorChainList($this);
     }
     private function _pushState()
     {
@@ -145,11 +152,14 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 $preload .= implode('', $g);
             }
         }
-        if ($visitor->requestArgs) {
-            $args = sprintf('props, {%s}', implode(",", array_keys($visitor->requestArgs)));
+        // if ($visitor->requestArgs) {
+        //     $args = sprintf('props, {%s}', implode(",", array_keys($visitor->requestArgs)));
+        // }  
+        if ($visitor->m_options->useRenderContextArgs){
+            $args = sprintf('$ctx');
         }
 
-        if ($visitor->m_conditional_group) { 
+        if ($visitor->m_conditional_group) {
             igk_environment()->isDev() && igk_die('warn : conditial group is not empty');
         }
         if (!empty($res = $visitor->m_sb . '')) {
@@ -157,8 +167,17 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         }
         return sprintf('render(%s){%s%s}', $args, $preload, $res);
     }
+    /**
+     * 
+     * @param mixed|array $node 
+     * @param mixed $options 
+     * @return static 
+     */
     private static function _HandleVisit($node, &$options)
     {
+        if (is_array($node)){
+            $node = new ChildrenNodeVisitor($node);
+        }
         $visitor = new static($node);
         $options = Activator::CreateFrom($options, VueSFCRenderNodeVisitorOptions::class);
         $visitor->m_options = $options;
@@ -191,12 +210,31 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         }
     }
 
-    protected function _downgradeGlobalChildCount(){ 
-        if ($this->m_globalStart_Array){
+    protected function _downgradeGlobalChildCount()
+    {
+        if ($this->m_globalStart_Array) {
             if ($this->m_globalDepth <= 1) { // conditionnal skip 
-                $this->m_globalChildCounter--; 
+                $this->m_globalChildCounter--;
             }
         }
+    }
+
+    /**
+     * get template slot name
+     * @param mixed $attrs 
+     * @return null|string 
+     */
+    protected function _GetTemplateNameAddProps(& $attrs, & $props=null): ?string{
+        $keys = array_keys($attrs);
+        $name = null;
+        foreach($keys as $key){
+            if (preg_match("/^(v-slot:|#)(?P<name>.+)/", $key, $tab)){
+                $name = $tab['name'];
+                $props = $attrs[$key];
+                unset($attrs[$key]);
+            }
+        }
+        return $name;
     }
 
     #region visit
@@ -211,10 +249,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
      */
     protected function beginVisit(HtmlItemBase $t, bool $first_child, bool $has_childs, bool $last_child): ?bool
     {
-        igk_debug_wln('begin visit : '. $t->getTagName());
-        // + | debug counting
-        //  $count = igk_env_count(__METHOD__);
-
+        igk_debug_wln('begin visit : ' . $t->getTagName());
         $tch = '';
         $ch = '';
         $preserve = count($this->m_preservelist) > 0;
@@ -250,11 +285,12 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 $this->m_sb->append($tch . VueConstants::VUE_METHOD_RENDER . self::getTextDefinition($content, null, $this->_preserveContent()));
                 $this->skip = true;
                 $this->skip_end = true;
-                if ($this->m_child_state){ 
+                if ($this->m_child_state) {
                     $this->m_child_state[0]->sep = ',';
                     $this->m_child_state[0]->has_childs = true;
                 }
                 $this->_update_conditionLevel();
+                $this->m_chain_list->increment();
                 return true;
             }
             return null;
@@ -262,8 +298,8 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         if ($t instanceof HtmlCommentNode) {
             self::AddLib($this->m_options, VueConstants::VUE_COMPONENT_COMMENT);
             $v_tc = self::_GetValue($content, null, true);
-            if (strpos($v_tc,"\n")!==false){
-                $v_tc = igk_str_surround(stripslashes($v_tc),'`');
+            if (strpos($v_tc, "\n") !== false) {
+                $v_tc = igk_str_surround(stripslashes($v_tc), '`');
             }
             $this->m_sb->append($tch . VueConstants::VUE_METHOD_RENDER . sprintf(
                 '(%s,%s)',
@@ -274,6 +310,8 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             $this->skip_end = true;
             if ($this->m_child_state)
                 $this->m_child_state[0]->sep = ',';
+            $this->m_last_text = ' ';
+            $this->m_chain_list->increment();
             return true;
         }
 
@@ -284,7 +322,6 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         $v_loop = false;
         $v_directives = [];
         $v_skip = false;
-        $v_start_child = false;
         $manual_child  = null;
         if (empty($tagname) || !$canrender) {
             //  $this->m_sb->append($tch);
@@ -313,50 +350,16 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             return null;
         }
 
-        if (strtolower($tagname)=='script'){
+        if (strtolower($tagname) == 'script') {
             $this->skip = true;
             $this->skip_end = true;
             return null;
         }
         $attrs = $t->getAttributes()->to_array();
 
-        // TODO : MANAGE TEMPLATE transform to slot or explode to content .
-        if (0 && strtolower($tagname)=='template'){
-            // igk_wln_e("found template.....");
-            // isset($attrs['v-else']) && 
-            igk_die('v-else not allowed supported in template');
-            if ($r = $this->m_conditional_group) {
-                if ($r[0][0]->depth >= $this->m_globalDepth) {
-                    // end conditional 
-                    $this->endConditional();
-                    $this->m_sb->append(",");
-                    $tch = '';
-                }
-            }
-            // special meaning in vue
-            $v_n = new VueComponent('dummy-template');
-            $childs = $t->getRenderedChilds();
-            $v_n->addRange($childs);
-            $v_n->setAttributes($t->getAttributes()->to_array());
-            // $v_n->Load($t->render());
-            $sf = new static($v_n);
-            $sf->m_options = $this->m_options;
-        
-            $sf->visit();
-            $this->m_last_text = $sf->m_last_text;
-            $content = $sf->m_sb.'';
-            $content = str_replace("h('dummy-template',[", '',$content);
-            $content = preg_replace("/\]\):null$/", ':null',$content);
-            $this->m_sb->append($tch .$content);
-            $this->skip = true;
-            $this->skip_end = true;
-            if ($this->m_child_state) {
-                $this->m_child_state[0]->sep = ',';
-            }
-            return null;
-        }
- 
-        // + | special tag meaning , slot - for example
+
+
+        // + | special tag meaning , slot, template in component - for example
         if ($this->isSpecialTagMeaning($tagname, $attrs)) {
 
             $s->append($tch . $this->resolvSpecialTag($tagname, $attrs, $v_slot, $has_childs));
@@ -367,6 +370,37 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             $this->_updateGlobalChildCounter();
             return true;
         }
+
+        if ($tagname=='template'){ 
+            // template is a special case - in component can be use for render slot:
+            // - can be use to render conditional zone v-if
+            $refoptions = [];
+            // explicit detect template definition 
+            $name = self::_GetTemplateNameAddProps($attrs, $props);
+            if ($name){
+                $children = $t->getRenderedChilds();
+                if (is_string($props)){
+                    $tj = array_map('trim', array_filter(explode(',', trim($props,'{}'))));
+                    $refoptions['contextVars'] = [$tj];
+                }
+                $visitor = self::_HandleVisit($children, $refoptions, get_class($this));
+                $g = $visitor->m_sb . '';
+                $src = sprintf('%s:(%s)=>%s', $name, is_string($props)? $props: '', $g );
+                $this->m_options->slot_templates[$name] =  $src;
+                
+                // $this->m_sb->append($src);
+            }
+            $this->skip = true;
+            $this->skip_end = true;
+            return true;
+        }
+
+        if ($this->m_options->slot_templates){
+            if (isset($this->m_options->slot_templates['default'])){
+                igk_die("explicit default template already initialize .... ".$t->render());
+            }
+        }
+
 
         // child detected by skipping
         if ($tch) {
@@ -385,7 +419,6 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             }
             $this->m_child_detect = false;
             $this->m_close_childs = !$this->m_start_render;
-            $v_start_child = true;
         }
 
 
@@ -397,29 +430,170 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         }
 
         $this->_updateGlobalChildCounter();
+        $this->m_chain_list->increment();
+
+
+        // TODO : MANAGE TEMPLATE transform to slot or explode to content .
+        if (strtolower($tagname) == 'template') {
+            $v_slot_def = $this->resolveSlotAttribute($attrs);
+            list($is_slot, $v_slot_name, $v_slot_props) = array_values($v_slot_def); 
+ 
+            // special meaning in vue
+            $v_n = new VueNoTagNode(); // 'dummy-template');
+            if ($m_content = $t->getContent()){
+                $v_n->text($m_content);
+            }
+
+            $childs = $t->getRenderedChilds();
+            $v_n->addRange($childs);
+            // $v_n->setAttributes($attrs); 
+            $sf = new static($v_n);
+            $sf->m_preserveExpression = true; 
+            $old = $this->m_options->preserveInterpolation ;
+            $sf->m_options = $this->m_options;
+            $sf->m_options->preserveInterpolation = true;
+            $sf->visit();
+            $sf->m_options->preserveInterpolation = $old;
+ 
+
+            $this->m_last_text = $sf->m_last_text;
+            $content = $sf->m_sb . '';
+            $_tmpcontent = '';
+            if ($attrs) {
+                $this->handleAttributes(
+                    $this->node,
+                    $attrs,
+                    $s,
+                    $first_child,
+                    $last_child,
+                    $has_childs,
+                    $v_directives,
+                    $v_skip,
+                    $v_loop,
+                    $v_conditional,
+                    $context,
+                    $ch,
+                    $preserve,
+                    $_tmpcontent
+                );
+            }
+
+            if ($is_slot) {
+                if ($v_conditional) {
+                    // $b = $sf->m_sb;
+                    $cond = $this->m_conditionals[0];
+                    if ($cond->i != 'v-if') {
+                        igk_die($cond->i . " conditial not allowed for named slot");
+                    }
+                    $b = '(' . $content . ')';
+                    $sf->m_sb = new StringBuilder($b);
+                    $sf->m_conditionals = [array_shift($this->m_conditionals)];
+                    $sf->m_conditionals[0]->sb = new StringBuilder();
+                    $sf->_endOrCreateConditionalGroup($t);
+                    $sf->endConditional();
+                    $content = $sf->m_sb . "";
+
+                    $v_conditional = false;
+                }
+                $p = $this->m_chain_list;
+                if (empty($v_slot_name)) {
+                    $v_slot_name = 'default';
+                } else if (preg_match("/^\[(?P<name>.+)\]$/", $v_slot_name, $dyn_tab)) {
+                    $v_slot_name = trim($dyn_tab['name']);
+                    $v_slot_name = self::_GetExpression($v_slot_name, true);
+                    // dynamic slot
+                    if ($p && $p->pushDynamicSlotComponent($content, $v_slot_name));
+                } else {
+                    // + | render slot
+                    if (empty($content)){
+                        $content='null';
+                    }
+                    $content = sprintf("%s:(%s)=>%s", $v_slot_name, $v_slot_props, $content);
+                    if ($p && $this->isResolvableComponent($p->getName())) {
+                        $p->pushSlotComponent($v_slot_name, $content);
+                    }
+                }
+                $content = '';
+            } else {
+                $this->m_sb->append($tch . $content);
+            } 
+            $this->skip = true;
+            $this->skip_end = true;
+            // consider element as a single item
+            $this->m_chain_list->increment();
+            if ($this->m_child_state) {
+                $this->m_child_state[0]->sep = ',';
+            }
+            return true;
+        }
         $s->append(VueConstants::VUE_METHOD_RENDER . "(");
         $this->m_func_depth++;
-        $v_info = $this->_pushState(); 
+        $v_info = $this->_pushState();
+        $this->m_chain_list = $this->m_chain_list->push($tagname, $v_info);
         //treat special tag before rendering
         if ($this->isBuildInComponent($tagname)) {
             $s->append($this->resolveBuildInComponent($tagname, $attrs, $v_slot, $has_childs));
-            if (strtolower($tagname)=='teleport'){
-                if (!$has_childs && !empty($content)){
+            if (strtolower($tagname) == 'teleport') {
+                if (!$has_childs && !empty($content)) {
+                    // + | transform inner teleport content to child list because teleport don't use innerHTML content 
                     $inner_content = $content;
-                    $content = '';                    
+                    $content = '';
                     $node = new VueNoTagNode;
                     $node->load($inner_content);
                     $mvisitor = new self($node);
                     $mvisitor->m_options = $this->m_options;
                     $mvisitor->visit();
-                    $info = $mvisitor->m_sb."";
-                    $manual_child = sprintf('[%s]',trim($info,'[]'));
+                    $info = $mvisitor->m_sb . "";
+                    $manual_child = sprintf('[%s]', trim($info, '[]'));
                 }
             }
-
-
-        } else if ($this->isResolvableComponent($tagname)) {
+        } else if ($this->checkIsResolvableComponent($t, $tagname, $v_slot) ) {
+            $v_slot =false;
             $s->append($this->resolveComponent($tagname, $attrs, $v_slot, $has_childs));
+            $ch = ',';
+            if (empty($attrs) && $has_childs) {
+                // posibility of childrend slot
+                $s->append($ch . "{}");
+            } else if ($attrs) {
+                $rcontent = '';
+                $this->handleAttributes(
+                    $this->node,
+                    $attrs,
+                    $s,
+                    $first_child,
+                    $last_child,
+                    $has_childs,
+                    $v_directives,
+                    $v_skip,
+                    $v_loop,
+                    $v_conditional,
+                    $context,
+                    $ch,
+                    $preserve,
+                    $rcontent
+                );
+                // clear attributes ... 
+                $attrs = [];
+            }
+            if ($v_slot) { // provide slot definition 
+                if (is_string($v_slot)){
+                    $this->m_chain_list->slotName = $v_slot;
+                }               
+                if ($has_childs) {
+                    $this->m_sb->append($s);
+                    $this->m_chain_list->setBuffer($this->m_sb);
+                    $this->m_chain_list->resolvedComponent = true;
+                    $this->m_sb = new StringBuilder;
+                    $s->clear();
+                    $v_slot =false;
+                }
+            } else {
+                // add slot entry
+                if ($has_childs) {
+                    // force inline slot for better performance
+                    $v_slot = true;
+                }
+            }
         } else {
             $s->append(igk_str_surround($tagname, "'"));
         }
@@ -459,10 +633,13 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                     $content = '';
                 } else {
                     $this->m_last_text = $content;
-                    $content = self::_GetValue($content, $this->m_options, $preserve);
+                    $content = self::_GetValue($content, $this->m_options, $preserve, $this->m_preserveExpression);
                     if (self::DetectHtmlSupport($content))
                         $s->append($ch . '{innerHTML:' . $content . '}');
                     else {
+                        if ($v_slot){
+                            $content = sprintf('(%s)=>%s', !is_bool($v_slot)?$v_slot:'', $content);
+                        }
                         $s->append($ch . $content);
                     }
                     $content = '';
@@ -496,10 +673,10 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 $s->append($tch . VueConstants::VUE_METHOD_RENDER . self::getTextDefinition($inner_content, null, $this->_preserveContent()));
                 $ch = ',';
                 $this->m_child_state[0]->sep = $ch;
+                $this->m_chain_list->increment();
             }
-        }
-        else {
-            if ($manual_child){
+        } else {
+            if ($manual_child) {
                 $s->append($ch);
                 $s->append($manual_child);
             }
@@ -534,38 +711,38 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     }
     protected function _close($t, $v_info, $has_childs, bool $shift)
     {
-      
         $v_childs_container = (!$v_info || $v_info->start_child);
         if ($has_childs) {
             $this->m_sb->rtrim(',');
             if ($this->m_single_item || $v_childs_container) {
-                //if (!$v_info || $v_info->start_child) {
-                $this->m_sb->append("]");
+                if (!$this->m_options->noCloseArrayFlag){
+                    $this->m_sb->append("]");
+                }
+                $this->m_options->noCloseArrayFlag = false;
                 if ($shift) {
                     array_shift($this->m_child_state);
                 }
-                //     }
-                // } else {
-                //     $this->m_sb->append("]");
-                //     array_shift($this->m_child_state);
             }
-            $this->m_single_item = false;          
+            $this->m_single_item = false;
         }
-       $this->_closeFunction();
+        $this->_closeFunction();
     }
-    private function _closeFunction(){
+    private function _closeFunction()
+    {
         if ($this->m_func_depth) {
             $this->m_sb->append(")");
             $this->m_func_depth--;
         }
     }
-    private function _closeArray($v_info){
-        if ($v_info && $v_info->start_child){
+    private function _closeArray($v_info)
+    {
+        if ($v_info && $v_info->start_child) {
             // close array childs 
-            $this->m_sb->append("]"); 
+            $this->m_sb->append("]");
         }
     }
-    private function _closePreservation($t){
+    private function _closePreservation($t)
+    {
         if ($this->m_preservelist) {
             if ($this->m_preservelist[0] === $t) {
                 array_shift($this->m_preservelist);
@@ -585,8 +762,56 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
      */
     protected function endVisit(HtmlItemBase $t, bool $has_childs, bool $last, bool $end_visit)
     {
-        // igk_debug_wln('end visit::  ' . $this->m_globalDepth);
+        igk_debug_wln("end visit : ".$t->getTagName());
+
         $v_info = $this->_popState();
+
+        if ($this->m_options->slot_templates){
+            $rf = rtrim($this->m_sb . "");
+            if (igk_str_endwith($rf, '()=>[')){
+                $rf = substr($rf, 0, -5);
+            } else {
+
+            }
+            $rf .= sprintf('{%s}', implode(",", $this->m_options->slot_templates));
+
+            $this->m_options->slot_templates = null;
+            $this->m_options->noCloseArrayFlag = true;
+            $this->m_sb->set($rf);
+        }
+
+        if ($this->m_chain_list->resolvedComponent) {
+            $buffer = $this->m_chain_list->getBuffer();
+            $c = trim($this->m_sb . "", '[, ');
+            $dyn = [];
+            if ($props = $this->m_chain_list->getSlotProps()) {
+                //remove last array 
+                $have_default  = false;
+                foreach ($props as $k => $v) {
+                    if (!$have_default) {
+                        $have_default = $k == 'default';
+                    }
+                    if ($v instanceof VueSFCDynamicSlot) {
+                        $dyn[] = sprintf('...((n)=>{const p={};p[n]=()=>%s;return p})(`${%s}`)', $v->expression, $v->content);
+                    } else {
+                        $dyn[] = $v;
+                    }
+                }
+                if ($c && !$have_default) {
+                    $dyn[] = sprintf("default:()=>[%s]", $c);
+                }
+
+                $buffer->rtrim('[ ')->append(sprintf(",{%s}", implode(',', $dyn)));
+                $v_info->start_child = false;
+            } else {
+                // prefer slot definition
+                if (!empty($c)) {
+                    $buffer->append(sprintf(",(%s)=>[%s", $this->m_chain_list->slotName, $c));
+                }
+            }
+            $this->m_sb->set($buffer . '');
+            $buffer->clear();
+        }
         // $close_array = $has_childs && $this->m_single_item || (!$v_info || $v_info->start_child);
         $closed = false;
         if ($v_info && $v_info->start_child && !is_null($this->m_globalDepth)) {
@@ -603,111 +828,62 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         // + | --------------------------------------------------------------------
         // + | preserved list stop render 
         // + | 
-      
+
         // every time with read a conditionals we must update the conditional list before closing the node 
-        if ($this->m_conditionals || $this->m_conditional_group){
-            $cond = null; 
+        if ($this->m_conditionals || $this->m_conditional_group) {
+            $cond = null;
             // igk_debug_wln('end conditional.....');           
-            if ($this->m_conditionals){   
-                if ($this->m_conditional_group){
-                    if ($this->m_conditional_group[0][0]->depth > $this->m_globalDepth){ 
+            if ($this->m_conditionals) {
+                if ($this->m_conditional_group) {
+                    if ($this->m_conditional_group[0][0]->depth > $this->m_globalDepth) {
                         $this->endConditional();
                         // if ($v_info && $v_info->start_child){
                         //     // close array childs 
                         //     $this->m_sb->append("]"); 
                         // }
                     }
-                } 
+                }
                 $cond = $this->m_conditionals[0];
-                if ($cond->t === $t){
+                if ($cond->t === $t) {
                     $this->_closeArray($v_info);
                     $this->_closeFunction();
                     $this->_endOrCreateConditionalGroup($t);
-                   
                 } else {
                     // $this->_closeFunction();                    
                     // $this->_closeArray($v_info);
                     $this->_closeArray($v_info);
                     $this->_closeFunction();
-                } 
+                }
             } else {
                 // $group = $this->m_conditional_group[0];  
-                $this->endConditional(); 
+                $this->endConditional();
                 $this->_closeArray($v_info);
                 $this->_closeFunction();
-            }
-
-
-            // if($this->m_conditional_group && !$this->m_conditionals){
-            //     // no conditional next found . so end conditional 
-            //     $this->endConditional();
-            //     igk_dev_wln('no end found**************************************');
-            // } else if ($this->m_conditional_group && $this->m_conditionals){
-            //     if ($this->m_conditional_group[0][0]->group){
-            //         $this->endConditional();
-            //         igk_dev_wln("end first condition ..... ");
-            //     }
-
-            //     // check for new conditional start
-            //     $cond = $this->m_conditionals[0];
-            //     if ($cond->i =='v-if'){
-            //         $this->_endOrCreateConditionalGroup($t); 
-            //     }
-            // }
-            // if ($v_info && $v_info->start_child){
-            //     // close array childs 
-            //     $this->m_sb->append("]"); 
-            // }
-            // // close function list
-    
-            // // close function 
-            // if ($this->m_func_depth){
-            //     $this->m_sb->append(")"); 
-            //     $this->m_func_depth--;
-            // }
-            // if ($this->m_conditionals ){
-            //     $cond =  $this->m_conditionals[0];
-            //     $skip_conditions = true;
-            //     if($cond->depth > $this->m_globalDepth){
-            //         // force end condition 
-            //         igk_dev_wln('force end condition');
-            //     } else {
-            //         if ($cond->t === $t){
-            //             $this->_endOrCreateConditionalGroup($t);
-            //             $skip_conditions = false;
-            //         }
-            //     }
-            // }
-            // // wait for condition next marker
-            // if (!$skip_conditions && $this->m_conditional_group){ 
-            //     $group = $this->m_conditional_group[0];
-            //     if (($group[0]->group) || ($group[0]->i=='v-else')){ 
-            //         $this->endConditional();
-            //     } else {
-            //         $group[0]->group = true;
-            //         if ($cond && ($cond->i  == 'v-else')){
-            //             $this->endConditional();
-            //         }
-            //     }
-            // } 
+            }  
             $closed = true;
-        } 
+        }
 
-        !$closed && $this->_close($t, $v_info, $has_childs, true); 
+        !$closed && $this->_close($t, $v_info, $has_childs, true);
 
-      
+
 
         if ($this->m_loop_group) {
             $g = $this->m_loop_group[0];
             if ($g->t === $t) {
                 $q = array_shift($this->m_loop_group);
-                $src = self::_GetLoopScript($q->v, $this->m_sb);
+                $range =false;
+                $src = self::GetLoopScript($q->v, $this->m_sb, $q->key, $range);
                 //   $q->sb->set($src);
                 $q->sb->append($src);
                 $this->m_sb = $q->sb;
                 if ($this->m_options->contextVars) {
                     array_shift($this->m_options->contextVars);
                 }
+                $this->m_options->useRenderContextArgs = true;
+                if ($range){
+                    $this->m_options->defineGlobal['_range'] = VueSFCUtility::RenderRangeFunction();
+                }
+                $this->m_options->useRangeMethod = $range;
             }
         }
 
@@ -726,8 +902,8 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
 
 
         if ($end_visit) {
-           
-            if ($this->m_conditional_group){
+
+            if ($this->m_conditional_group) {
                 $this->endConditional();
             }
             if ($this->m_globalStart_Array || ($this->m_close_childs > 0)) {
@@ -738,8 +914,10 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 $this->m_sb->set(trim($this->m_sb . '', '[]'));
             }
         }
+
+        $this->m_chain_list = $this->m_chain_list->parent();
     }
-    private function _startChildVisit(HtmlNode $t)
+    private function _startChildVisit(HtmlItemBase $t)
     {
         $s = false;
         if (is_null($this->m_globalDepth)) {
@@ -748,9 +926,10 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         }
         // store child state in used
         array_unshift($this->m_child_state, (object)[
-            'sep' => '', 
+            'sep' => '',
             'depth' => $this->m_globalDepth,
-            'target'=>$t]);
+            'target' => $t
+        ]);
         if (!$s) {
             $this->m_globalDepth++;
         }
@@ -802,7 +981,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 }
                 if ($c->i == 'v-else') {
                     // close conditional group
-               
+
                     $this->_downgradeGlobalChildCount();
 
                     array_push($this->m_conditional_group[0], $c);
@@ -811,11 +990,11 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 if ($c->i == 'v-if') {
                     // + | start conditional group                    
                     array_unshift($this->m_conditional_group, [$c]);
-                    $c->buffer = $this->m_sb.'';
+                    $c->buffer = $this->m_sb . '';
                 } else {
                     if ($c->i == 'v-else-if') {
                         $this->_downgradeGlobalChildCount();
-                        
+
                         array_push($this->m_conditional_group[0], $c);
                         $this->m_conditional_group[0][0]->group = false;
                     }
@@ -833,7 +1012,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     }
     #endregion
 
-  
+
     protected static function _GetAttributeStringDefinition($node, $attrs, $content, $context, $options, &$directives, bool $preserve)
     {
         $s = '';
@@ -908,10 +1087,10 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         }
         $r = $this->m_sb; // current string build 
         $cond = '';
-        $is_inloop = $this->_preserveContent(); 
+        $is_inloop = $this->_preserveContent();
 
         $sep = 0;
-        $else_block = null; 
+        $else_block = null;
 
         $stop = false;
         $baseDepth = $c[0]->depth;
@@ -923,9 +1102,9 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
             $lsep = '';
             $sep = 0;
             while (count($c) > 0) {
-                $q = array_pop($c);              
+                $q = array_pop($c);
                 if ($q->i == 'v-else') {
-                    $else = $r . ""; //self::_GetExpression($q->v,true);      
+                    $else = $r . ""; 
                     $else_block = $q;
                     $stop = true;
                 } else {
@@ -942,11 +1121,11 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                         $express = '[' . $express . ']';
                     }
                     $express = sprintf("%s%s%s?%s", '', $sep ? '' : '', $cond, $express);
-                    if ($is_array){
-                        $express = '['.$express;
+                    if ($is_array) {
+                        $express = '[' . $express;
                     }
                     // $n_build->append($express);
-                    $n_build->set($express. $lsep.$n_build);
+                    $n_build->set($express . $lsep . $n_build);
                     $sep++;
                     //$lsep = '/*:*/:(';
                     $lsep = ':(';
@@ -960,12 +1139,11 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 $m = sprintf("[%s:%s]", $n_build . '', $else);
             } else {
 
-                $lf = str_repeat(')', $sep-1);
+                $lf = str_repeat(')', $sep - 1);
 
                 // $n_build->append(str_repeat(')', $sep-1));
 
-                $m = sprintf("%s:%s%s", $n_build . '', $else.$lf, $sep > 1 ? '' : '');
-                
+                $m = sprintf("%s:%s%s", $n_build . '', $else . $lf, $sep > 1 ? '' : '');
             }
             array_unshift($conditions, $m);
             if ($this->m_conditional_group) {
@@ -1016,7 +1194,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                 $v = igk_getv($attr, $k);
                 unset($attr[$k]);
                 // + | add conditionals tag
-                igk_debug_wln("add conditional : ".$k." : ".$this->m_globalDepth);
+                igk_debug_wln("add conditional : " . $k . " : " . $this->m_globalDepth);
                 array_unshift($this->m_conditionals, (object)[
                     'sb' => null, // stringbuilder
                     't' => $t,
@@ -1029,7 +1207,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
                     'depth' => $this->m_globalDepth,
                     'childCount' => 0,
                     'group' => $groups,
-                    'buffer' =>null
+                    'buffer' => null
                 ]);
             }
         }
@@ -1043,18 +1221,21 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     {
         if ($loop = igk_getv($attrs, $k = 'v-for')) {
             unset($attrs[$k]);
+            $key = igk_getv($attrs, ':key');
+            unset($attrs[':key']);
             array_unshift($this->m_loop_group, (object)[
                 't' => $t,
-                'v' => $loop,
-                'sb' => null
+                'v' => $loop, // condition
+                'key'=> $key, // setup :key
+                'sb' => null  // render string
             ]);
-            array_unshift($options->contextVars, array_merge(['key'], self::_GetContextArgs($loop, $options)));
+            array_unshift($options->contextVars, array_merge(['key'], self::_GetLoopContextArgs($loop, $options)));
             return true;
         }
         return false;
     }
     #endregion
-    protected static function _GetContextArgs($loop, $options)
+    protected static function _GetLoopContextArgs($loop, $options)
     {
         $args = $options->contextVars ? $options->contextVars[0] : [];
         preg_match('/^\s*(?P<cond>.+)\s+(?P<op>in|of)\s+(?P<exp>.+)\s*$/', $loop, $tab) ?? igk_die("not a valid expression");
@@ -1080,6 +1261,7 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
     }
     protected function getTextDefinition($content, $context = null, bool $preserve = false, $interpolate = true)
     {
+        $preserve = $preserve || $this->m_options->preserveInterpolation;
         if ($preserve && preg_match("/" . $this->interpolateStart . "/", $content)) {
 
             $v = VueSFCUtility::InterpolateValue($content, '{{',  '}}', true, []);
@@ -1127,50 +1309,61 @@ class VueSFCRenderNodeVisitor extends HtmlVisitor
         }
         return $o;
     }
-
-    public function LeaveAttribute($k, $v)
+ 
+    /**
+     * build loop expression 
+     * @param mixed $cond 
+     * @param mixed $content 
+     * @return string 
+     * @throws IGKException 
+     * @throws ArgumentTypeNotValidException 
+     * @throws ReflectionException 
+     */
+    public static function GetLoopScript($cond, $content, ?string $key = null, & $range=false)
     {
-        return [self::_GetKey($k), self::_GetValue($v, null, true)];
-    }
+        // allow range expression - only work in shortcut - rendering....
 
-    public static function _GetLoopScript($cond, $content)
-    {
         preg_match('/^\s*(?P<cond>.+)\s+(?P<op>in|of)\s+(?P<exp>.+)\s*$/', $cond, $tab) ?? igk_die("not a valid expression");
         $src = "";
         $cond = $tab['cond'];
         $op = $tab['op'];
         $mode = preg_match('/^\{.+\}$/', $tab['cond']) ? 1 : (preg_match('/^\(.+\)$/', $tab['cond']) ? 2 : 0);
         $exp = JSUtility::TreatExpression($tab['exp']);
-    
-        switch ($mode) {
-            case 1:
-                $firstkey = trim(explode(",", substr($cond, 1, -1))[0]);
-                $src = sprintf(<<<'JS'
-(function(l,key){for(key %s l){((%s)=>this.push(%s))(l[key])} return this}).apply([],[%s])
-JS, $op, $cond, $content, $exp);
-                break;
-            case 2:
-                $firstkey = trim(explode(",", substr($cond, 1, -1))[0]);
+        $skey = $key && ($key!='key')? 'const key='.$key.';':'';
+        // generator require in operator for key generation.
+        $op = 'in';
+        if ($mode==1){
+            $cond = "(".$cond.")";
+        }
+        if (preg_match('/([0-9]+)\s*\.\.\s*([0-9]+)/', $exp, $tab)){
+            $exp = sprintf('_range(%s)',  $tab[1].','.$tab[2]);
+            $range = true;
+        }
+//         switch ($mode) {
+//             case 1:
+//                 $src = sprintf(<<<'JS'
+// (function(l,key){for(key %s l){((%s)=>this.push(%s))(l[key], key)} return this}).apply([],[%s])
+// JS, $op, $cond, $content, $exp);
+//                 break;
+            // case 2:                 
                 // + | push on array list items
                 $src = sprintf(
-                    '(function(l,ctx,key){for(key %s l){((%s)=>this.push((function(){ return %s}).apply(ctx)))(l[key])}return this}).apply([],[%s, /*  context - contex=== */ this])',
+                    '(function(l,key){for(key %s l){(%s=>this.push((function(){ '.$skey.'return %s}).apply($ctx)))(l[key],key)}return this}).apply([],[%s])',
                     $op,
-                    $firstkey,
+                    $cond,
                     $content,
                     $exp
                 );
-                break;
-
-            default:
-                $firstkey = trim($cond);
-                $src = sprintf(
-                    '(function(l,key){for(key in l){((%s)=>this.push(%s))(l[key])}return this}).apply([],[%s])',
-                    $firstkey,
-                    $content,
-                    $exp
-                );
-                break;
-        }
+        //         break;
+        //     default: 
+        //         $src = sprintf(
+        //             '(function(l,key){for(key in l){((%s)=>this.push(%s))(l[key], key)}return this}).apply([],[%s])',
+        //             $cond,
+        //             $content,
+        //             $exp
+        //         );
+        //         break;
+        // }
         return $src;
     }
 }
